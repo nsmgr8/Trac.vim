@@ -2,6 +2,7 @@ import os
 import vim
 import xmlrpclib
 import re
+trac, browser, mode = [None] * 3
 ########################
 # RPC Base Class
 ########################
