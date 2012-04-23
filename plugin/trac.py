@@ -1210,10 +1210,10 @@ class TracTimeline:
         from time import strftime
         import re
 
-        feed = trac.wiki.server_url.replace('login/xmlrpc' , 'timeline?ticket=on&changeset=on&wiki=on&max=50&daysback=90&format=rss')
+        feed = trac.wiki.server_url.replace('login/rpc' , 'timeline?ticket=on&changeset=on&wiki=on&max=50&daysback=90&format=rss')
         d = feedparser.parse(feed)
         str_feed = "(Hit <enter> or <space >on a line containing Ticket:>>)\n"
-        str_feed += "(feed: " + feed + ")\n\n"
+        #str_feed += "(feed: " + feed + ")\n\n"
         for item in d['items']:
 
             #Each item is a dictionary mapping properties to values
