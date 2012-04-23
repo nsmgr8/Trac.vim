@@ -303,7 +303,7 @@ class WikiWindow (VimWindow):
         vim.command('nnoremap <buffer> gf <c-w><c-f><c-w>K')
         vim.command('vertical resize +70')
         vim.command('nnoremap <buffer> :w<cr> :TWSave')
-        vim.command('setlocal syntax=wiki')
+        vim.command('setlocal syntax=tracwiki')
         vim.command('setlocal linebreak')
         vim.command('setlocal noswapfile')
 class WikiTOContentsWindow (NonEditableWindow):
@@ -365,7 +365,7 @@ class WikiVimDiffWindow (NonEditableWindow):
         #map gf to a new buffer (switching buffers doesnt work with nofile)
         vim.command('nnoremap <buffer> gf <c-w><c-f><c-w>K')
         vim.command('vertical resize +70')
-        vim.command('setlocal syntax=wiki')
+        vim.command('setlocal syntax=tracwiki')
         vim.command('setlocal linebreak')
         vim.command('setlocal noswapfile')
 
@@ -1137,7 +1137,7 @@ class TicketWindow (NonEditableWindow):
         #map gf to a new buffer (switching buffers doesnt work with nofile)
         vim.command('nnoremap <buffer> gf <c-w><c-f><c-w>K')
         #vim.command('setlocal linebreak')
-        vim.command('setlocal syntax=wiki')
+        vim.command('setlocal syntax=tracwiki')
         vim.command('nnoremap <buffer> <c-p> :python trac.ticket.context_set()<cr>')
 class TicketCommentWindow (VimWindow):
     """ For adding Comments to tickets """
@@ -1148,7 +1148,7 @@ class TicketCommentWindow (VimWindow):
         vim.command('nnoremap <buffer> :w<cr> :python trac.ticket.add_comment()<cr>')
         vim.command('nnoremap <buffer> :wq<cr> :python trac.ticket.add_comment()<cr>:python trac.normal_view()<cr>')
         vim.command('nnoremap <buffer> :q<cr> :python trac.normal_view()<cr>')
-        vim.command('setlocal syntax=wiki')
+        vim.command('setlocal syntax=tracwiki')
         vim.command('setlocal noswapfile')
 class TicketTOContentsWindow (NonEditableWindow):
     """ Ticket Table Of Contents """
@@ -1161,7 +1161,7 @@ class TicketTOContentsWindow (NonEditableWindow):
         vim.command('nnoremap <buffer> <2-LeftMouse> :python trac.ticket_view("CURRENTLINE")<cr>')
         vim.command('setlocal cursorline')
         vim.command('setlocal linebreak')
-        vim.command('setlocal syntax=wiki')
+        vim.command('setlocal syntax=tracwiki')
         vim.command('setlocal foldmethod=indent')
         vim.command('setlocal nowrap')
         vim.command('silent norm ggf: <esc>')
@@ -1261,7 +1261,7 @@ class TracTimelineWindow(NonEditableWindow):
         vim.command('nnoremap <buffer> <c-]> :python trac.wiki_view("<cword>")<cr>')
         vim.command('nnoremap <buffer> :q<cr> :python trac.normal_view()<cr>')
         #vim.command('vertical resize +70')
-        vim.command('setlocal syntax=wiki')
+        vim.command('setlocal syntax=tracwiki')
         vim.command('setlocal linebreak')
         vim.command('nnoremap <buffer> <cr> :python trac.search_open(False)<cr>')
         vim.command('nnoremap <buffer> <space> :python trac.search_open(True)<cr>')
