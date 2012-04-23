@@ -119,10 +119,10 @@
 "Configuration
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-" Load trac.py either from the runtime directory (usually
-" /usr/local/share/vim/vim71/plugin/ if you're running Vim 7.1) or from the
-" home vim directory (usually ~/.vim/plugin/).
-"
+if exists("g:tracvim_loaded")
+    finish
+endif
+
 if g:tracServerList == {}
     finish
 endif
@@ -132,14 +132,7 @@ if !has("python")
     finish
 endif
 
-if filereadable($VIMRUNTIME."/plugin/trac.py")
-  pyfile $VIMRUNTIME/plugin/trac.py
-elseif filereadable($HOME."/.vim/plugin/trac.py")
-  pyfile $HOME/.vim/plugin/trac.py
-else
-  call confirm('trac.vim: Unable to find trac.py. Place it in either your home vim directory or in the Vim runtime directory.', 'OK')
-  finish
-endif
+exe 'pyfile ' . expand('<sfile>:p:h') . '/trac.py'
 
 python import sys
 python if sys.version_info[:3] < (2,4,4):vim.command('let g:tracPythonVersionFlag = 1')
@@ -509,3 +502,5 @@ fun TracCloseViewCallback()
 endfun
 
 python trac_init()
+
+let g:tracvim_loaded = 1
