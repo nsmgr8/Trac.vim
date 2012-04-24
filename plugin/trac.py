@@ -1227,7 +1227,7 @@ class TracTimeline:
             if m != None:
                 str_feed += "Wiki:>> " + m.group(1) + "\n"
                 str_feed += m.group(2) + "\n"
-            m = re.match(r"^Changeset \[([\d]+)\]: (.*)$", item.title)
+            m = re.match(r"^Changeset \[([\w]+)\]: (.*)$", item.title)
             if m != None:
                 str_feed += "Changeset:>> " + m.group(1) + "\n"
                 str_feed += m.group(2) + "\n"
@@ -1531,7 +1531,7 @@ class Trac:
             vim.command ('!' + browser +" file://" + file_name)
     def changeset_view(self, changeset, b_full_path = False):
         #if b_full_path == True:
-        changeset = self.wiki.server_url.replace('login/xmlrpc' , 'changeset/' + changeset)
+        changeset = self.wiki.server_url.replace('login/rpc' , 'changeset/' + changeset)
 
         self.normal_view()
         vim.command ('belowright split')
