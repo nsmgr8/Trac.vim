@@ -9,8 +9,7 @@ trac, browser, mode = [None] * 3
 class TracRPC:
     """ General xmlrpc RPC routines """
     def __init__ (self, server_url):
-        self.server_url = server_url
-        self.server = xmlrpclib.ServerProxy(server_url)
+        self.setServer(server_url)
         self.multicall = xmlrpclib.MultiCall(self.server)
     def setServer (self, url):
         self.server_url = url
@@ -451,7 +450,7 @@ class TracTicket(TracRPC):
         self.sort = TracTicketSort()
 
     def setServer (self, url):
-        self.server = xmlrpclib.ServerProxy(url)
+        TracRPC.setServer(self, url)
         self.getOptions()
     def getOptions (self):
         """ Get all milestone/ priority /status options """
