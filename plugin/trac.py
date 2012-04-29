@@ -10,7 +10,6 @@ class TracRPC:
     """ General xmlrpc RPC routines """
     def __init__ (self, server_url):
         self.setServer(server_url)
-        self.multicall = xmlrpclib.MultiCall(self.server)
     def setServer (self, url):
         self.server_url = url
         self.server = xmlrpclib.ServerProxy(url)
@@ -1499,11 +1498,11 @@ class Trac:
         ''' browser view of current wiki buffer '''
         global browser
 
-        if self.uiwiki.mode == 1:
-            print "Retrieving preview from wiki " + self.wiki.currentPage + '...'
+        if self.uiwiki.mode == 1 and self.wiki.currentPage:
+            print "Retrieving preview from wiki %s..." % self.wiki.currentPage
             wikitext = self.uiwiki.wikiwindow.dump()
-        elif self.uiticket.mode == 1:
-            print "Retrieving preview from ticket #" + self.ticket.current_ticket_id + '...'
+        elif self.uiticket.mode == 1 and self.ticket.current_ticket_id:
+            print "Retrieving preview from ticket #%s..." % self.ticket.current_ticket_id
             wikitext = self.uiticket.commentwindow.dump()
         else:
             print "You need an active ticket or wiki open!"
