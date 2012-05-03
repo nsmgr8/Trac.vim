@@ -12,6 +12,7 @@ class TracRPC:
         self.setServer(server_url)
     def setServer (self, url):
         self.server_url = url
+        url = '{scheme}://{auth}@{server}{rpc_path}'.format(**url)
         self.server = xmlrpclib.ServerProxy(url)
 ########################
 # User Interface Base Classes
@@ -1208,7 +1209,7 @@ class TracTimeline:
         from time import strftime
         import re
 
-        feed = trac.wiki.server_url.replace('login/rpc' , 'timeline?ticket=on&changeset=on&wiki=on&max=50&daysback=90&format=rss')
+        feed = '{scheme}://{server}/timeline?ticket=on&changeset=on&wiki=on&max=50&daysback=90&format=rss'.format(**trac.wiki.server_url)
         d = feedparser.parse(feed)
         str_feed = "(Hit <enter> or <space >on a line containing Ticket:>>)\n"
         #str_feed += "(feed: " + feed + ")\n\n"
@@ -1446,8 +1447,7 @@ class Trac:
             'timeline' : self.timeline_view
             } [view]()
     def get_user (self, server_url):
-        #TODO fix for https
-        return re.sub('http://(.*):.*$', r'\1', server_url)
+        return server_url['auth'].split(':')[0]
     def normal_view(self) :
         trac.uiserver.normal_mode()
         trac.uiwiki.normal_mode()
@@ -1529,7 +1529,7 @@ class Trac:
             vim.command ('!' + browser +" file://" + file_name)
     def changeset_view(self, changeset, b_full_path = False):
         #if b_full_path == True:
-        changeset = self.wiki.server_url.replace('login/rpc' , 'changeset/' + changeset)
+        changeset = '{scheme}://{server}/changeset/{changeset}'.format(changeset=changeset, **self.wiki.server_url)
 
         self.normal_view()
         vim.command ('belowright split')
