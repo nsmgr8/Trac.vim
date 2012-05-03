@@ -3,6 +3,33 @@ import vim
 import xmlrpclib
 import re
 trac, browser, mode = [None] * 3
+class HTTPDigestTransport(xmlrpclib.SafeTransport):
+    """
+    Transport that uses urllib2 so that we can do Digest authentication.
+    """
+
+    def __init__(self, scheme, username, password, realm):
+        self.username = username
+        self.password = password
+        self.realm = realm
+        self.scheme = scheme
+
+    def request(self, host, handler, request_body, verbose):
+        import urllib2
+        url = '{scheme}://{host}{handler}'.format(scheme=self.scheme, host=host, handler=handler)
+        request = urllib2.Request(url)
+        request.add_data(request_body)
+        # Note: 'Host' and 'Content-Length' are added automatically
+        request.add_header("User-Agent", self.user_agent)
+        request.add_header("Content-Type", "text/xml") # Important
+
+        # setup digest authentication
+        authhandler = urllib2.HTTPDigestAuthHandler()
+        authhandler.add_password(self.realm, url, self.username, self.password)
+        opener = urllib2.build_opener(authhandler)
+
+        f = opener.open(request)
+        return(self.parse_response(f))
 ########################
 # RPC Base Class
 ########################
@@ -12,8 +39,18 @@ class TracRPC:
         self.setServer(server_url)
     def setServer (self, url):
         self.server_url = url
-        url = '{scheme}://{auth}@{server}{rpc_path}'.format(**url)
-        self.server = xmlrpclib.ServerProxy(url)
+        self.scheme = url.get('scheme', 'http')
+        auth = url.get('auth', '').split(':')
+
+        if len(auth) == 2:  # Basic authentication
+            url = '{scheme}://{auth}@{server}{rpc_path}'.format(**url)
+        else:   # Anonymous or Digest authentication
+            url = '{scheme}://{server}{rpc_path}'.format(**url)
+        if len(auth) == 3:  # Digest authentication
+            transport = HTTPDigestTransport(self.scheme, *auth)
+            self.server = xmlrpclib.ServerProxy(url, transport=transport)
+        else:
+            self.server = xmlrpclib.ServerProxy(url)
 ########################
 # User Interface Base Classes
 ########################
