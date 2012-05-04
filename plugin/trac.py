@@ -13,6 +13,8 @@ class HTTPDigestTransport(xmlrpclib.SafeTransport):
         self.password = password
         self.realm = realm
         self.scheme = scheme
+        self.verbose = False
+        xmlrpclib.SafeTransport.__init__(self)
 
     def request(self, host, handler, request_body, verbose):
         import urllib2
@@ -195,6 +197,7 @@ class TracWiki(TracRPC):
         """ Get Wiki Page """
         global trac
 
+        name = name.strip()
         self.currentPage = name
 
         try:
@@ -333,6 +336,8 @@ class WikiWindow (VimWindow):
         VimWindow.__init__(self, name)
     def on_create(self):
         vim.command('nnoremap <buffer> <c-]> :python trac.wiki_view ("<C-R><C-W>")<cr>')
+        vim.command('nnoremap <buffer> wo F:lvt<space>"zy:python trac.wiki_view ("<C-R>z")<cr>')
+        vim.command('nnoremap <buffer> w] F:lvt]"zy:python trac.wiki_view ("<C-R>z")<cr>')
         vim.command('nnoremap <buffer> :q<cr> :python trac.normal_view()<cr>')
         vim.command('nnoremap <buffer> :wq<cr> :python trac.save_wiki('')<cr>:python trac.normal_view()<cr>')
         vim.command('nnoremap <buffer> <2-LeftMouse> :python trac.wiki_view("<C-R><C-W>")<cr>')
