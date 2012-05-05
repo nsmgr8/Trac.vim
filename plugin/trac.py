@@ -38,7 +38,10 @@ class HTTPDigestTransport(xmlrpclib.SafeTransport):
 class TracRPC:
     """ General xmlrpc RPC routines """
     def __init__ (self, server_url):
-        self.setServer(server_url)
+        if 'server' not in server_url:
+            print 'Please provide your trac server address'
+        else:
+            self.setServer(server_url)
     def setServer (self, url):
         self.server_url = {
             'scheme': url.get('scheme', 'http'),
@@ -1494,7 +1497,7 @@ class Trac:
             'timeline' : self.timeline_view
             } [view]()
     def get_user (self, server_url):
-        return server_url['auth'].split(':')[0]
+        return server_url.get('auth', '').split(':')[0]
     def normal_view(self) :
         trac.uiserver.normal_mode()
         trac.uiwiki.normal_mode()
