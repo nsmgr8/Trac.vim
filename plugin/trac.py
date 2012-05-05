@@ -40,8 +40,13 @@ class TracRPC:
     def __init__ (self, server_url):
         self.setServer(server_url)
     def setServer (self, url):
-        self.server_url = url
-        self.scheme = url.get('scheme', 'http')
+        self.server_url = {
+            'scheme': url.get('scheme', 'http'),
+            'server': url['server'],
+            'rpc_path': url.get('rpc_path', 'login/rpc'),
+            'auth': url.get('auth', ''),
+        }
+        scheme = url.get('scheme', 'http')
         auth = url.get('auth', '').split(':')
 
         if len(auth) == 2:  # Basic authentication
@@ -49,7 +54,7 @@ class TracRPC:
         else:   # Anonymous or Digest authentication
             url = '{scheme}://{server}{rpc_path}'.format(**url)
         if len(auth) == 3:  # Digest authentication
-            transport = HTTPDigestTransport(self.scheme, *auth)
+            transport = HTTPDigestTransport(scheme, *auth)
             self.server = xmlrpclib.ServerProxy(url, transport=transport)
         else:
             self.server = xmlrpclib.ServerProxy(url)
