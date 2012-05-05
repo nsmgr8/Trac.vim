@@ -501,7 +501,7 @@ class TracTicket(TracRPC):
 
     def setServer (self, url):
         TracRPC.setServer(self, url)
-        self.getOptions()
+
     def getOptions (self):
         """ Get all milestone/ priority /status options """
 
