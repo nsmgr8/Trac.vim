@@ -197,6 +197,7 @@ class TracWiki(TracRPC):
         self.a_pages = []
         self.revision = 1
         self.currentPage = False
+        self.visitedPages = []
     def getAllPages(self):
         """ Gets a List of Wiki Pages """
         self.a_pages = self.server.wiki.getAllPages()
@@ -207,6 +208,8 @@ class TracWiki(TracRPC):
 
         name = name.strip()
         self.currentPage = name
+        if name not in self.visitedPages:
+            self.visitedPages.append(name)
 
         try:
             if revision == None:
@@ -346,6 +349,8 @@ class WikiWindow (VimWindow):
         vim.command('nnoremap <buffer> <c-]> :python trac.wiki_view ("<C-R><C-W>")<cr>')
         vim.command('nnoremap <buffer> wo F:lvt<space>"zy:python trac.wiki_view ("<C-R>z")<cr>')
         vim.command('nnoremap <buffer> w] F:lvt]"zy:python trac.wiki_view ("<C-R>z")<cr>')
+        vim.command('nnoremap <buffer> wb :python trac.wiki_view (direction=-1)<cr>')
+        vim.command('nnoremap <buffer> wf :python trac.wiki_view (direction=1)<cr>')
         vim.command('nnoremap <buffer> :q<cr> :python trac.normal_view()<cr>')
         vim.command('nnoremap <buffer> :wq<cr> :python trac.save_wiki('')<cr>:python trac.normal_view()<cr>')
         vim.command('nnoremap <buffer> <2-LeftMouse> :python trac.wiki_view("<C-R><C-W>")<cr>')
@@ -1343,22 +1348,22 @@ class Trac:
 
         self.user            = self.get_user(self.server_url)
 
-    def wiki_view(self , page = False, b_create = False) :
+    def wiki_view(self , page=False, b_create=False, direction=False) :
+        """ Creates The Wiki View """
+        if direction:
+            current = self.wiki.visitedPages.index(self.wiki.currentPage)
+            try:
+                page = self.wiki.visitedPages[current + direction]
+            except IndexError:
+                print 'Error: History out of range'
+                return
+        if page == 'CURRENTLINE':
+            page = vim.current.line
         if page == False:
             if self.wiki.currentPage == False:
                 page = 'WikiStart'
             else:
                 page = self.wiki.currentPage
-
-        """ Creates The Wiki View """
-        if page == 'CURRENTLINE':
-            page = vim.current.line
-
-        print 'Connecting...'
-        self.normal_view()
-
-        if (page == False):
-            page = 'WikiStart'
 
         self.normal_view()
 
