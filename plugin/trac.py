@@ -1367,7 +1367,7 @@ class Trac:
             self.uiwiki.wiki_attach_window.create('belowright 3 new')
             self.uiwiki.wiki_attach_window.write("\n".join(self.wiki.current_attachments))
 
-        print self.wiki.get_page_info()
+        #print self.wiki.get_page_info()
     def ticket_view(self, id = False, b_use_cache = False) :
         """ Creates The Ticket View """
 
