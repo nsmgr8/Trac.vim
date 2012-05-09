@@ -119,11 +119,7 @@
 "Configuration
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-if exists("g:tracvim_loaded")
-    finish
-endif
-
-if g:tracServerList == {}
+if exists("g:tracvim_loaded") || !exists('g:tracServerList') || g:tracServerList == {}
     finish
 endif
 
@@ -132,7 +128,7 @@ if !has("python")
     finish
 endif
 
-exe 'pyfile ' . expand('<sfile>:p:h') . '/trac.py'
+pyfile <sfile>:p:h/trac.py
 
 python import sys
 python if sys.version_info[:3] < (2,4,4):vim.command('let g:tracPythonVersionFlag = 1')
