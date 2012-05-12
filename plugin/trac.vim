@@ -246,7 +246,7 @@ com! -nargs=? -complete=customlist,ComWiki        TWOpen          python trac.wi
 fun LoadWikiCommands()
     "NOTE: TWSave is referenced in trac.py
     com! -nargs=*                                     TWSave          python trac.wiki.save(<q-args>)
-    com! -nargs=?                                     TWCreate        python trac.wiki_view  (<f-args>, True)
+    "com! -nargs=?                                     TWCreate        python trac.wiki_view  (<f-args>, True)
     com! -nargs=? -complete=customlist,ComAttachments TWGetAttachment python trac.get_attachment (<f-args>)
     com! -nargs=? -complete=file                      TWAddAttachment python trac.add_attachment(<f-args>)
     "HTML Preview/Dumps
@@ -258,7 +258,7 @@ endfun
 fun UnloadWikiCommands()
     try
         delc TWSave
-        delc TWCreate
+        "delc TWCreate
         delc TWGetAttachment
         delc TWAddAttachment
         delc TWPreview
