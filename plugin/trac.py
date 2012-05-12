@@ -80,6 +80,7 @@ class VimWindow(object):
         """ check window is OK, if not then create """
         if not self.isprepared():
             self.create()
+        self.set_focus()
 
     def on_create(self):
         """ On Create is used  by the VimWindow subclasses to define vim
@@ -140,9 +141,6 @@ class VimWindow(object):
     def command(self, cmd):
         """ go to my window & execute command """
         self.prepare()
-        winnr = self.getwinnr()
-        if winnr != int(vim.eval("winnr()")):
-            vim.command('{0}wincmd w'.format(winnr))
         vim.command(cmd)
 
     def set_focus(self):
@@ -1355,6 +1353,7 @@ class Trac:
             self.uiwiki.wiki_attach_window.create('belowright 3 new')
             self.uiwiki.wiki_attach_window.write("\n".join(
                                                     self.wiki.attachments))
+        self.uiwiki.wikiwindow.set_focus()
 
     def ticket_view(self, id=False, b_use_cache=False):
         """ Creates The Ticket View """
