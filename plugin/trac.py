@@ -1231,28 +1231,28 @@ class TracTimeline:
         feed = '{scheme}://{server}/timeline?{query}'.format(query=query,
                                                         **trac.wiki.server_url)
         d = feedparser.parse(feed)
-        str_feed = "(Hit <enter> or <space >on a line containing Ticket:>>)\n"
+        str_feed = ["Hit <enter> or <space> on a line containing :>>", ""]
         for item in d['items']:
             #Each item is a dictionary mapping properties to values
-            str_feed += "Update: " + strftime("%Y-%m-%d %H:%M:%S",
-                                              item.updated_parsed) + "\n"
+            str_feed.append(strftime("%Y-%m-%d %H:%M:%S", item.updated_parsed))
 
             m = re.match(r"^Ticket #(\d+) (.*)$", item.title)
-            if m != None:
-                str_feed += "Ticket:>> " + m.group(1) + "\n"
-                str_feed += m.group(2) + "\n"
+            if m:
+                str_feed.append("Ticket:>> " + m.group(1))
+                str_feed.append(m.group(2))
             m = re.match(r"^([\w\d]+) (edited by .*)$", item.title)
-            if m != None:
-                str_feed += "Wiki:>> " + m.group(1) + "\n"
-                str_feed += m.group(2) + "\n"
+            if m:
+                str_feed.append("Wiki:>> " + m.group(1))
+                str_feed.append(m.group(2))
             m = re.match(r"^Changeset \[([\w]+)\]: (.*)$", item.title)
-            if m != None:
-                str_feed += "Changeset:>> " + m.group(1) + "\n"
-                str_feed += m.group(2) + "\n"
+            if m:
+                str_feed.append("Changeset:>> " + m.group(1))
+                str_feed.append(m.group(2))
 
-            str_feed += "Link: " + item.link + "\n"
+            str_feed.append("Link: " + item.link)
+            str_feed.append('')
 
-        return str_feed
+        return '\n'.join(str_feed)
 
 
 class TracTimelineUI(UI):
@@ -1559,8 +1559,7 @@ class Trac:
         else:
             vim.command('!' + browser + " file://" + file_name)
 
-    def changeset_view(self, changeset, b_full_path=False):
-        #if b_full_path == True:
+    def changeset_view(self, changeset):
         changeset = '{scheme}://{server}/changeset/{changeset}'.format(
                 changeset=changeset, **self.wiki.server_url)
 

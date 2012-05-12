@@ -409,7 +409,7 @@ endfun
 
 "MISCELLANEOUS
 com! -nargs=+                                     TSearch         python trac.search_view(<q-args>)
-com! -nargs=1                                     TChangesetOpen  python trac.changeset_view(<f-args>, True)
+com! -nargs=1                                     TChangesetOpen  python trac.changeset_view(<f-args>)
 com! -nargs=0                                     TTimelineOpen   python trac.timeline_view()
 com! -nargs=0                                     TClose          python trac.normal_view(<f-args>)
 
