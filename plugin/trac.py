@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 import os
 import vim
 import xmlrpclib
@@ -42,9 +44,9 @@ class TracRPC(object):
         if 'server' not in server_url:
             print 'Please provide your trac server address'
         else:
-            self.setServer(server_url)
+            self.set_server(server_url)
 
-    def setServer(self, url):
+    def set_server(self, url):
         self.server_url = {
             'scheme': url.get('scheme', 'http'),
             'server': url['server'],
@@ -72,13 +74,9 @@ class VimWindow(object):
         self.buffer = []
         self.firstwrite = True
 
-    def isprepared(self):
-        """ check window is OK """
-        return all([self.buffer, self.getwinnr() > 0])
-
     def prepare(self):
         """ check window is OK, if not then create """
-        if not self.isprepared():
+        if not all([self.buffer, self.get_winnr() > 0]):
             self.create()
         self.set_focus()
 
@@ -87,7 +85,7 @@ class VimWindow(object):
             mappings and buffer settings
         """
 
-    def getwinnr(self):
+    def get_winnr(self):
         """ Returns the vim window number for wincmd calls """
         return int(vim.eval("bufwinnr('{0}')".format(self.name)))
 
@@ -145,7 +143,7 @@ class VimWindow(object):
 
     def set_focus(self):
         """ Set focus on the current window """
-        vim.command('{0}wincmd w'.format(self.getwinnr()))
+        vim.command('{0}wincmd w'.format(self.get_winnr()))
 
     def resize_width(self, size=False):
         """ resizes to default width or specified size """
@@ -183,9 +181,7 @@ class UI(object):
         """ restore mode to normal """
         if self.mode == 0:  # is normal mode ?
             return
-
         self.destroy()
-
         self.mode = 0
         self.cursign = None
 
@@ -194,27 +190,27 @@ class TracWiki(TracRPC):
     """ Trac Wiki Class """
     def __init__(self, server_url):
         TracRPC.__init__(self, server_url)
-        self.a_pages = []
+        self.pages = []
         self.revision = 1
-        self.currentPage = False
-        self.visitedPages = []
+        self.current_page = False
+        self.visited_pages = []
 
-    def getAllPages(self):
+    def get_all_pages(self):
         """ Gets a List of Wiki Pages """
-        self.a_pages = self.server.wiki.getAllPages()
-        return "\n".join(self.a_pages)
+        self.pages = self.server.wiki.getAllPages()
+        return "\n".join(self.pages)
 
-    def getPage(self, name, revision=None):
+    def get_page(self, name, revision=None):
         """ Get Wiki Page """
         try:
             name = name.strip()
+            self.current_page = name
+            if name not in self.visited_pages:
+                self.visited_pages.append(name)
             if revision is not None:
                 wikitext = self.server.wiki.getPage(name, revision)
             else:
                 wikitext = self.server.wiki.getPage(name)
-            self.currentPage = name
-            if name not in self.visitedPages:
-                self.visitedPages.append(name)
         except:
             wikitext = "Describe {0} here.".format(name)
         return wikitext
@@ -224,31 +220,31 @@ class TracWiki(TracRPC):
         global trac
         if not comment:
             comment = trac.default_comment
-        self.server.wiki.putPage(self.currentPage,
+        self.server.wiki.putPage(self.current_page,
                 trac.uiwiki.wikiwindow.dump(), {"comment": comment})
 
     def get_page_info(self):
         """ Returns page revision info most recent author """
         try:
-            info = self.server.wiki.getPageInfo(self.currentPage)
+            info = self.server.wiki.getPageInfo(self.current_page)
             self.revision = info['version']
             return '{name} v{version}, author: {author}'.format(**info)
         except:
             return 'Cannot get page info'
 
-    def createPage(self, name, content, comment):
+    def create_page(self, name, content, comment):
         """ Saves a Wiki Page """
         return self.server.wiki.putPage(name, content, {"comment": comment})
 
-    def addAttachment(self, file):
+    def add_attachment(self, file):
         ''' Add attachment '''
         file_name = os.path.basename(file)
-        path = '{0}/{1}'.format(self.currentPage, file_name)
+        path = '{0}/{1}'.format(self.current_page, file_name)
         self.server.wiki.putAttachment(path,
                 xmlrpclib.Binary(open(file).read()))
 
-    def getAttachment(self, file):
-        ''' Add attachment '''
+    def get_attachment(self, file):
+        ''' Get attachment '''
         buffer = self.server.wiki.getAttachment(file)
         file_name = os.path.basename(file)
 
@@ -259,11 +255,11 @@ class TracWiki(TracRPC):
         else:
             print "Will not overwrite existing file {0}".format(file_name)
 
-    def listAttachments(self):
+    def list_attachments(self):
         """ Look for attachments on the current page """
-        self.attachments = self.server.wiki.listAttachments(self.currentPage)
+        self.attachments = self.server.wiki.listAttachments(self.current_page)
 
-    def getWikiHtml(self, wikitext):
+    def get_wiki_html(self, wikitext):
         """ Converts the wikitext from a buffer to html for previews """
         return self.server.wiki.wikiToHtml(wikitext)
 
@@ -284,7 +280,7 @@ class TracWiki(TracRPC):
 
     def get_options(self):
         """ returns a list of a sites wiki pages for command completes """
-        vim.command('let g:tracOptions="{0}"'.format("|".join(self.a_pages)))
+        vim.command('let g:tracOptions="{0}"'.format("|".join(self.pages)))
 
     def vim_diff(self, revision=None):
         """ Creates a vimdiff of an earlier wiki revision """
@@ -296,7 +292,7 @@ class TracWiki(TracRPC):
         diffwindow = WikiVimDiffWindow()
         diffwindow.create('vertical belowright diffsplit')
 
-        wikitext = self.getPage(self.currentPage, revision)
+        wikitext = self.get_page(self.current_page, revision)
         if wikitext:
             diffwindow.write(wikitext)
 
@@ -521,12 +517,12 @@ class TracTicket(TracRPC):
     def __init__(self, server_url):
         TracRPC.__init__(self, server_url)
         self.current_ticket_id = False
-        self.a_option = []
-        self.a_tickets = []
+        self.fields = []
+        self.tickets = []
         self.filter = TracTicketFilter()
         self.sort = TracTicketSort()
 
-    def getOptions(self):
+    def get_fields(self):
         """ Get all milestone/ priority /status options """
         multicall = xmlrpclib.MultiCall(self.server)
         multicall.ticket.milestone.getAll()
@@ -537,30 +533,30 @@ class TracTicket(TracRPC):
         multicall.ticket.severity.getAll()
         multicall.ticket.component.getAll()
 
-        a_option = []
+        fields = []
         for option in  multicall():
-            a_option.append(option)
+            fields.append(option)
 
-        for milestone in a_option[0]:
+        for milestone in fields[0]:
             multicall.ticket.milestone.get(milestone)
 
-        a_option.append(multicall())
-        self.a_option = a_option
+        fields.append(multicall())
+        self.fields = fields
 
-    def getAllTickets(self, summary=True, b_use_cache=False):
+    def get_all_tickets(self, summary=True, b_use_cache=False):
         """ Gets a List of Ticket Pages """
-        if not self.a_option:
-            self.getOptions()
+        if not self.fields:
+            self.get_fields()
 
         if b_use_cache:
-            tickets = self.a_tickets
+            tickets = self.tickets
         else:
             multicall = xmlrpclib.MultiCall(self.server)
             clause = vim.eval('g:tracTicketClause')
             for ticket in self.server.ticket.query(clause):
                 multicall.ticket.get(ticket)
             tickets = multicall()
-            self.a_tickets = tickets
+            self.tickets = tickets
 
         tickets = self.sort.sort(tickets)
         if summary:
@@ -581,27 +577,25 @@ class TracTicket(TracRPC):
                 for f in ('summary', 'priority', 'status', 'component',
                           'milestone', 'type', 'owner'):
                     v = ticket[3].get(f, '')
-                    if summary:
-                        str_ticket.append(v)
-                    else:
-                        k = f.title()
-                        str_ticket.append("    * {0}: {1}".format(k, v))
+                    if not summary:
+                        v = "   * {0}: {1}".format(f.title(), v)
+                    str_ticket.append(v)
 
                 if not summary and self.session_is_present(ticket[0]):
-                    str_ticket.append("    * Session: PRESENT")
+                    str_ticket.append("   * Session: PRESENT")
                 str_ticket.append(ticket[3]["description"])
                 separator = ' || ' if summary else '\n'
                 ticket_list.append(separator.join(str_ticket))
 
         return "\n".join(ticket_list)
 
-    def getTicket(self, id):
+    def get_ticket(self, id):
         """ Get Ticket Page """
         ticket = self.server.ticket.get(int(id))
         self.current_ticket_id = id
         self.current_component = ticket[3]["component"]
 
-        self.listAttachments()
+        self.list_attachments()
 
         ticket_changelog = self.server.ticket.changeLog(id)
 
@@ -652,22 +646,23 @@ class TracTicket(TracRPC):
 
         return '\n'.join(str_ticket)
 
-    def updateTicket(self, comment, attribs={}, notify=False):
+    def update_ticket(self, comment, attribs={}, notify=False):
         """ add ticket comments change attributes """
         return self.server.ticket.update(self.current_ticket_id, comment,
                                          attribs, notify)
 
-    def createTicket(self, description, summary, attributes={}):
+    def create_ticket(self, description, summary, attributes={}):
         """ create a trac ticket """
         self.current_ticket_id = self.server.ticket.create(summary,
                 description, attributes, False)
 
-    def addAttachment(self, file):
+    def add_attachment(self, file):
         ''' Add attachment '''
-        self.server.ticket.putAttachment(self.current_ticket_id, file,
+        file_name = os.path.basename(file)
+        self.server.ticket.putAttachment(self.current_ticket_id, file_name,
                 'attachment', xmlrpclib.Binary(open(file).read()))
 
-    def listAttachments(self):
+    def list_attachments(self):
         a_attach = self.server.ticket.listAttachments(self.current_ticket_id)
         self.attachments = []
         for attach in a_attach:
@@ -675,10 +670,10 @@ class TracTicket(TracRPC):
 
     def get_options(self, op_id):
         vim.command('let g:tracOptions="{0}"'.format("|".join(
-                                                     self.a_option[op_id])))
+                                                     self.fields[op_id])))
 
-    def getAttachment(self, file):
-        ''' Add attachment '''
+    def get_attachment(self, file):
+        ''' Get attachment '''
         buffer = self.server.ticket.getAttachment(self.current_ticket_id, file)
         file_name = os.path.basename(file)
 
@@ -707,7 +702,7 @@ class TracTicket(TracRPC):
             attribs = {value: option, 'status': 'assigned'}
         else:
             attribs = {value: option}
-        trac.ticket.updateTicket(comment, attribs, False)
+        trac.ticket.update_ticket(comment, attribs, False)
         trac.ticket_view(trac.ticket.current_ticket_id, True)
 
     def add_comment(self):
@@ -723,7 +718,7 @@ class TracTicket(TracRPC):
         if not comment:
             print "Comment window is empty. Not adding to ticket"
 
-        trac.ticket.updateTicket(comment, attribs, False)
+        trac.ticket.update_ticket(comment, attribs, False)
         trac.uiticket.commentwindow.clean()
         trac.ticket_view(trac.ticket.current_ticket_id)
 
@@ -745,7 +740,7 @@ class TracTicket(TracRPC):
         if not comment:
             print "Comment window is empty. Not adding to ticket"
 
-        trac.ticket.updateTicket('', attribs, False)
+        trac.ticket.update_ticket('', attribs, False)
         trac.uiticket.commentwindow.clean()
         trac.ticket_view(trac.ticket.current_ticket_id)
 
@@ -777,15 +772,15 @@ class TracTicket(TracRPC):
         if not description:
             print "Description is empty. Ticket needs more info"
 
-        trac.ticket.createTicket(description, summary, attribs)
+        trac.ticket.create_ticket(description, summary, attribs)
         trac.uiticket.commentwindow.clean()
         trac.ticket_view(trac.ticket.current_ticket_id)
 
     def close_ticket(self, comment):
-        self.updateTicket(comment, {'status': 'closed'})
+        self.update_ticket(comment, {'status': 'closed'})
 
     def resolve_ticket(self, comment, resolution):
-        self.updateTicket(comment, {'status': 'closed',
+        self.update_ticket(comment, {'status': 'closed',
                                     'resolution': resolution})
 
     def session_save(self):
@@ -913,7 +908,7 @@ class TracTicket(TracRPC):
             print "Cancelled."
             return False
         attribs = {'summary': summary}
-        trac.ticket.updateTicket('', attribs, False)
+        trac.ticket.update_ticket('', attribs, False)
 
     def context_set(self):
         line = vim.current.line
@@ -942,7 +937,7 @@ class TracTicket(TracRPC):
     def summary_view(self):
         global trac
         trac.uiticket.summarywindow.create('belowright 10 new')
-        trac.uiticket.summarywindow.write(self.getAllTickets(True, False))
+        trac.uiticket.summarywindow.write(self.get_all_tickets(True, False))
         trac.uiticket.mode = 2
 
 
@@ -955,8 +950,8 @@ class TracTicketSort:
             return tickets
 
         sorted_tickets = []
-        #for milestone in trac.ticket.a_option[7]:
-        for milestone in trac.ticket.a_option[0]:
+        #for milestone in trac.ticket.fields[7]:
+        for milestone in trac.ticket.fields[0]:
             for ticket in tickets:
                 #if ticket[3]['milestone'] == milestone['name']:
                 if ticket[3]['milestone'] == milestone:
@@ -1325,29 +1320,29 @@ class Trac:
     def wiki_view(self, page=False, direction=False):
         """ Creates The Wiki View """
         if direction:
-            current = self.wiki.visitedPages.index(self.wiki.currentPage)
+            current = self.wiki.visited_pages.index(self.wiki.current_page)
             try:
-                page = self.wiki.visitedPages[current + direction]
+                page = self.wiki.visited_pages[current + direction]
             except IndexError:
                 print 'Error: History out of range'
                 return
         if page == 'CURRENTLINE':
             page = vim.current.line
         if page == False:
-            if self.wiki.currentPage == False:
+            if self.wiki.current_page == False:
                 page = 'WikiStart'
             else:
-                page = self.wiki.currentPage
+                page = self.wiki.current_page
 
         self.normal_view()
 
         self.uiwiki.open()
         self.uiwiki.tocwindow.clean()
-        self.uiwiki.tocwindow.write(self.wiki.getAllPages())
+        self.uiwiki.tocwindow.write(self.wiki.get_all_pages())
         self.uiwiki.wikiwindow.clean()
-        self.uiwiki.wikiwindow.write(self.wiki.getPage(page))
+        self.uiwiki.wikiwindow.write(self.wiki.get_page(page))
 
-        self.wiki.listAttachments()
+        self.wiki.list_attachments()
 
         if(self.wiki.attachments != []):
             self.uiwiki.wiki_attach_window.create('belowright 3 new')
@@ -1385,11 +1380,11 @@ class Trac:
         style = vim.eval('g:tracTicketStyle')
         if style == 'summary':
             self.uiticket.summarywindow.clean()
-            self.uiticket.summarywindow.write(self.ticket.getAllTickets(True,
+            self.uiticket.summarywindow.write(self.ticket.get_all_tickets(True,
                                                 b_use_cache))
         else:
             self.uiticket.tocwindow.clean()
-            self.uiticket.tocwindow.write(self.ticket.getAllTickets(False,
+            self.uiticket.tocwindow.write(self.ticket.get_all_tickets(False,
                                                 b_use_cache))
 
         self.uiticket.ticketwindow.clean()
@@ -1398,16 +1393,16 @@ class Trac:
             if self.ticket.current_ticket_id == False:
                 self.uiticket.ticketwindow.write("Select Ticket To Load")
             else:
-                self.uiticket.ticketwindow.write(self.ticket.getTicket(
+                self.uiticket.ticketwindow.write(self.ticket.get_ticket(
                                                 trac.ticket.current_ticket_id))
             #This sets the cursor to the TOC if theres no active ticket
             vim.command("wincmd h")
         else:
-            self.uiticket.ticketwindow.write(self.ticket.getTicket(id))
-            #self.ticket.listAttachments()
+            self.uiticket.ticketwindow.write(self.ticket.get_ticket(id))
+            #self.ticket.list_attachments()
 
-        if self.ticket.a_option == []:
-            self.ticket.getOptions()
+        if self.ticket.fields == []:
+            self.ticket.get_fields()
 
     def server_view(self):
         """ Display's The Server list view """
@@ -1452,17 +1447,16 @@ class Trac:
 
     def set_current_server(self, server_key, quiet=False, view=False):
         """ Sets the current server key """
-
         self.ticket.current_ticket_id = False
-        self.wiki.currentPage = False
+        self.wiki.current_page = False
 
         self.server_url = self.server_list[server_key]
         self.server_name = server_key
         self.user = self.get_user(self.server_url)
 
-        self.wiki.setServer(self.server_url)
-        self.ticket.setServer(self.server_url)
-        self.search.setServer(self.server_url)
+        self.wiki.set_server(self.server_url)
+        self.ticket.set_server(self.server_url)
+        self.search.set_server(self.server_url)
 
         self.user = self.get_user(self.server_url)
 
@@ -1493,12 +1487,12 @@ class Trac:
     def add_attachment(self, file):
         """ add an attachment to current wiki / ticket """
         if self.uiwiki.mode == 1:
-            print "Adding attachment to wiki", self.wiki.currentPage
-            self.wiki.addAttachment(file)
+            print "Adding attachment to wiki", self.wiki.current_page
+            self.wiki.add_attachment(file)
             print 'Done.'
         elif self.uiticket.mode == 1:
             print "Adding attachment to ticket", self.ticket.current_ticket_id
-            self.ticket.addAttachment(file)
+            self.ticket.add_attachment(file)
             print 'Done.'
         else:
             print "You need an active ticket or wiki open!"
@@ -1509,13 +1503,13 @@ class Trac:
             file = vim.current.line
 
         if self.uiwiki.mode == 1:
-            print "Retrieving attachment from wiki", self.wiki.currentPage
-            self.wiki.getAttachment(file)
+            print "Retrieving attachment from wiki", self.wiki.current_page
+            self.wiki.get_attachment(file)
             print 'Done.'
         elif self.uiticket.mode == 1:
             print "Retrieving attachment from ticket",
             print self.ticket.current_ticket_id
-            self.ticket.getAttachment(file)
+            self.ticket.get_attachment(file)
             print 'Done.'
         else:
             print "You need an active ticket or wiki open!"
@@ -1534,8 +1528,8 @@ class Trac:
     def preview(self, b_dump=False):
         ''' browser view of current wiki buffer '''
         global browser
-        if self.uiwiki.mode == 1 and self.wiki.currentPage:
-            print "Retrieving preview from wiki", self.wiki.currentPage
+        if self.uiwiki.mode == 1 and self.wiki.current_page:
+            print "Retrieving preview from wiki", self.wiki.current_page
             wikitext = self.uiwiki.wikiwindow.dump()
         elif self.uiticket.mode == 1 and self.ticket.current_ticket_id:
             print "Retrieving preview from ticket",
@@ -1545,7 +1539,7 @@ class Trac:
             print "You need an active ticket or wiki open!"
             return False
 
-        html = self.wiki.getWikiHtml(wikitext)
+        html = self.wiki.get_wiki_html(wikitext)
         html = '<html><body>{0}</body></html>'.format(html)
 
         file_name = vim.eval('g:tracTempHtml')
