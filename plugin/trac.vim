@@ -124,17 +124,17 @@ if exists("g:tracvim_loaded") || !exists('g:tracServerList') || g:tracServerList
 endif
 
 if !has("python")
-    call confirm('Trac.vim needs vim python 2.4.4 support. Wont load', 'OK')
+    call confirm('Trac.vim needs vim python 2.6 support. Wont load', 'OK')
     finish
 endif
 
 pyfile <sfile>:p:h/trac.py
 
 python import sys
-python if sys.version_info[:3] < (2,4,4):vim.command('let g:tracPythonVersionFlag = 1')
+python if sys.version_info[:2] < (2, 6): vim.command('let g:tracPythonVersionFlag = 1')
 
 if exists('g:tracPythonVersionFlag')
-    call confirm  ( "Trac.vim requires python 2.4.4 or later to work correctly" )
+    call confirm("Trac.vim requires python 2.6 or later to work correctly" )
     finish
 endif
 
@@ -159,16 +159,6 @@ if !exists('g:tracBrowser')
     let g:tracBrowser = 'lynx'         " For Setting up Browser view (terminal)
     "let g:tracBrowser = 'firefox'     " For Setting up Browser view (linux gui  - not tested)
     "let g:tracBrowser = '"C:\Program Files\Mozilla Firefox\firefox.exe"' "GVim on Windows not tested
-endif
-
-if !exists('g:tracServerList')
-
-let g:tracServerList = {}
-
-"Add Server Repositories as Dictionary entries
-let g:tracServerList['Vim Trac']             = 'http://vimtracuser:wibble@www.ascetinteractive.com.au/vimtrac/login/xmlrpc'
-let g:tracServerList['(ServerName)']         = 'http://(User):(Pass)@(ServerPath)/login/xmlrpc'
-
 endif
 
 "This can be modified to speed up queries
