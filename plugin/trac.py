@@ -591,58 +591,70 @@ class TracTicket(TracRPC):
 
     def get_ticket(self, id):
         """ Get Ticket Page """
-        ticket = self.server.ticket.get(int(id))
+        id = int(id)
+        ticket = self.server.ticket.get(id)
+        ticket_changelog = self.server.ticket.changeLog(id)
+        actions = self.server.ticket.getActions(id)
         self.current_ticket_id = id
         self.current_component = ticket[3]["component"]
-
         self.list_attachments()
 
-        ticket_changelog = self.server.ticket.changeLog(id)
-
         str_ticket = ["= Ticket Summary =", ""]
-        str_ticket.append("*   Ticket ID: {0}".format(ticket[0]))
+        str_ticket.append(" *   Ticket ID: {0}".format(ticket[0]))
         for f in ('owner', 'status', 'summary', 'type', 'priority',
                   'component', 'milestone', 'version'):
             v = ticket[3].get(f, '')
-            str_ticket.append("*{0:>12}: {1}".format(f.title(), v))
+            str_ticket.append(" *{0:>12}: {1}".format(f.title(), v))
 
         if self.session_is_present():
-            str_ticket.append("*     Session: PRESENT")
+            str_ticket.append(" *     Session: PRESENT")
 
-        str_ticket.append("* Attachments: ")
-        str_ticket.append('    '.join(self.attachments))
+        str_ticket.append(" * Attachments: ")
+        str_ticket.append(', '.join(self.attachments))
 
         str_ticket.append("")
         str_ticket.append("= Description: =")
         str_ticket.append("")
         str_ticket.append(ticket[3]["description"])
-        str_ticket.append("= CHANGELOG =")
         str_ticket.append("")
+        str_ticket.append("= Changelog =")
 
         import datetime
+        submission = [None, None]
         for change in ticket_changelog:
-            if change[4]:
-                if isinstance(change[0], xmlrpclib.DateTime):
-                    dt = datetime.datetime.strptime(change[0].value,
-                                                    "%Y%m%dT%H:%M:%S")
-                else:
-                    dt = datetime.datetime.fromtimestamp(change[0])
+            if not change[4]:
+                continue
+            if isinstance(change[0], xmlrpclib.DateTime):
+                dt = datetime.datetime.strptime(change[0].value,
+                                                "%Y%m%dT%H:%M:%S")
+            else:
+                dt = datetime.datetime.fromtimestamp(change[0])
 
-                my_time = dt.strftime("%a %d/%m/%Y %H:%M:%S")
-                #just mention if a ticket has been changed
-                brief = vim.eval('g:tracTicketBriefDescription')
-                if change[2] == 'comment':
-                    str_ticket.append('== ' + my_time + " (" + change[1] +
-                                      ": comment) ==")
-                    str_ticket.append(change[4])
-                elif brief == 0:
-                    if change[2] == 'description':
-                        str_ticket.append('== ' + my_time + " (" + change[1] +
-                                          ": modified description) ==")
-                    else:
-                        str_ticket.append('== ' + my_time + " (" + change[1] +
-                                          " set " + change[2] + " to " +
-                                          change[4] + ") ==")
+            my_time = dt.strftime("%a %d/%m/%Y %H:%M")
+            new_submission = [my_time, change[1]]
+            if submission != new_submission:
+                str_ticket.append("")
+                str_ticket.append('== {0} ({1}) =='.format(my_time,
+                                                            change[1]))
+                submission = new_submission
+            if change[2] in ('comment', 'description'):
+                str_ticket.append(' * {0}:'.format(change[2]))
+                str_ticket.append(change[4])
+            else:
+                if change[3]:
+                    str_ticket.append(" * '''{0}''': ''{1}'' > ''{2}''".format(
+                        change[2], change[3], change[4]))
+                else:
+                    str_ticket.append(" * '''{0}''': ''{1}''".format(change[2],
+                        change[4]))
+            # TODO: just mention if a ticket has been changed
+            # brief = vim.eval('g:tracTicketBriefDescription')
+
+        str_ticket.append("")
+        str_ticket.append('== Action ==')
+        str_ticket.append("")
+        for action in actions:
+            str_ticket.append(' > {action[0]}'.format(action=action))
 
         return '\n'.join(str_ticket)
 
@@ -696,12 +708,7 @@ class TracTicket(TracRPC):
 
         comment = trac.uiticket.commentwindow.dump()
         trac.uiticket.commentwindow.clean()
-        # if a milestone setting mate set status to assigned
-        # TODO Thisshuold be optional
-        if value == 'milestone':
-            attribs = {value: option, 'status': 'assigned'}
-        else:
-            attribs = {value: option}
+        attribs = {value: option}
         trac.ticket.update_ticket(comment, attribs, False)
         trac.ticket_view(trac.ticket.current_ticket_id, True)
 
