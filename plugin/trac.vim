@@ -23,8 +23,8 @@
 "               CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 "               TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 "               SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-" Name Of File: trac.vim , trac.py
-"  Description: Wiki Client to the Trac Project Manager (trac.edgewall.org)
+" Name Of File: trac.vim, trac.py
+"  Description: Wiki Client to the Trac Project Manager(trac.edgewall.org)
 "   Maintainer: Michael Brown <michael <at> ascetinteractive.com>
 " Contributors: Brad Fritz
 "  Last Change:
@@ -134,7 +134,7 @@ python import sys
 python if sys.version_info[:2] < (2, 6): vim.command('let g:tracPythonVersionFlag = 1')
 
 if exists('g:tracPythonVersionFlag')
-    call confirm("Trac.vim requires python 2.6 or later to work correctly" )
+    call confirm("Trac.vim requires python 2.6 or later to work correctly")
     finish
 endif
 
@@ -152,7 +152,7 @@ if !exists('g:tracTempHtml')
 endif
 
 if !exists('g:tracSessionDirectory')
-    let g:tracSessionDirectory = expand ('$HOME') . '/.vimtrac_session'
+    let g:tracSessionDirectory = expand('$HOME') . '/.vimtrac_session'
 endif
 
 if !exists('g:tracBrowser')
@@ -164,7 +164,7 @@ endif
 "This can be modified to speed up queries
 if !exists('g:tracTicketClause')
     let g:tracTicketClause = 'status!=closed'
-endif            
+endif
 
 "Set this to 1 if you wan the ticket view to ignore attribute changes which
 "can clutter up the view
@@ -222,22 +222,21 @@ endif
 "WIKI MODULE COMMANDS
 
 let g:tracDefaultView = 'wiki' " 'ticket' 'timeline'
-com! -nargs=+ -complete=customlist,ComTracServers TWServer  python trac.set_current_server  (<q-args>)
-com! -nargs=+ -complete=customlist,ComTracServers TTServer  python trac.set_current_server  (<q-args>, False, 'ticket')
-com! -nargs=+ -complete=customlist,ComTracServers TTLServer python trac.set_current_server  (<q-args>, False ,'timeline')
+com! -nargs=+ -complete=customlist,ComTracServers TWServer  python trac.set_current_server(<q-args>)
+com! -nargs=+ -complete=customlist,ComTracServers TTServer  python trac.set_current_server(<q-args>, False, 'ticket')
+com! -nargs=+ -complete=customlist,ComTracServers TTLServer python trac.set_current_server(<q-args>, False, 'timeline')
 
 "QuickTicket Option (modify this command for your own servers) - Note Ticket #12
-com! -nargs=+ TQTaskOnVimTrac    python trac.ticket.create(<q-args> , 'task'        , 'Vim Trac')
-com! -nargs=+ TQDefectOnVimTrac  python trac.ticket.create(<q-args> , 'defect'      , 'Vim Trac')
-com! -nargs=+ TQEnhanceOnVimTrac python trac.ticket.create(<q-args> , 'enhancement' , 'Vim Trac')
+com! -nargs=+ TQTaskOnVimTrac    python trac.ticket.create(<q-args>, 'task', 'Vim Trac')
+com! -nargs=+ TQDefectOnVimTrac  python trac.ticket.create(<q-args>, 'defect', 'Vim Trac')
+com! -nargs=+ TQEnhanceOnVimTrac python trac.ticket.create(<q-args>, 'enhancement', 'Vim Trac')
 
-com! -nargs=? -complete=customlist,ComWiki        TWOpen          python trac.wiki_view  (<f-args>)
+com! -nargs=? -complete=customlist,ComWiki TWOpen python trac.wiki_view(<f-args>)
 
 fun LoadWikiCommands()
     "NOTE: TWSave is referenced in trac.py
     com! -nargs=*                                     TWSave          python trac.wiki.save(<q-args>)
-    "com! -nargs=?                                     TWCreate        python trac.wiki_view  (<f-args>, True)
-    com! -nargs=? -complete=customlist,ComAttachments TWGetAttachment python trac.get_attachment (<f-args>)
+    com! -nargs=? -complete=customlist,ComAttachments TWGetAttachment python trac.get_attachment(<f-args>)
     com! -nargs=? -complete=file                      TWAddAttachment python trac.add_attachment(<f-args>)
     "HTML Preview/Dumps
     com! -nargs=0                                     TWPreview       python trac.preview(False)
@@ -248,7 +247,6 @@ endfun
 fun UnloadWikiCommands()
     try
         delc TWSave
-        "delc TWCreate
         delc TWGetAttachment
         delc TWAddAttachment
         delc TWPreview
@@ -259,7 +257,7 @@ endfun
 
 
 "TICKET MODULE COMMANDS
-com! -nargs=?                                     TTOpen          python trac.ticket_view  (<f-args>)
+com! -nargs=? TTOpen python trac.ticket_view(<f-args>)
 
 fun LoadTicketCommands()
     "Trac Ticket modifications
@@ -269,41 +267,41 @@ fun LoadTicketCommands()
 
     com! -nargs=0                                     TTAddComment        python trac.ticket.add_comment()
     "Ticket Attributes
-    com! -nargs=? -complete=customlist,ComMilestone   TTSetMilestone      python trac.ticket.set_attr(<f-args>, 'milestone' )
-    com! -nargs=? -complete=customlist,ComType        TTSetType           python trac.ticket.set_attr(<f-args>, 'type' )
-    com! -nargs=? -complete=customlist,ComStatus      TTSetStatus         python trac.ticket.set_attr(<f-args>, 'status' )
-    com! -nargs=? -complete=customlist,ComResolution  TTSetResolution     python trac.ticket.set_attr(<f-args>, 'resolution' )
-    com! -nargs=? -complete=customlist,ComPriority    TTSetPriority       python trac.ticket.set_attr(<f-args>, 'priority' )
-    com! -nargs=? -complete=customlist,ComSeverity    TTSetSeverity       python trac.ticket.set_attr(<f-args>, 'severity' )
-    com! -nargs=? -complete=customlist,ComComponent   TTSetComponent      python trac.ticket.set_attr(<f-args>, 'component' )
-    com! -nargs=?                                     TTSetOwner          python trac.ticket.set_attr(<f-args>, 'owner' )
+    com! -nargs=? -complete=customlist,ComMilestone   TTSetMilestone      python trac.ticket.set_attr(<f-args>, 'milestone')
+    com! -nargs=? -complete=customlist,ComType        TTSetType           python trac.ticket.set_attr(<f-args>, 'type')
+    com! -nargs=? -complete=customlist,ComStatus      TTSetStatus         python trac.ticket.set_attr(<f-args>, 'status')
+    com! -nargs=? -complete=customlist,ComResolution  TTSetResolution     python trac.ticket.set_attr(<f-args>, 'resolution')
+    com! -nargs=? -complete=customlist,ComPriority    TTSetPriority       python trac.ticket.set_attr(<f-args>, 'priority')
+    com! -nargs=? -complete=customlist,ComSeverity    TTSetSeverity       python trac.ticket.set_attr(<f-args>, 'severity')
+    com! -nargs=? -complete=customlist,ComComponent   TTSetComponent      python trac.ticket.set_attr(<f-args>, 'component')
+    com! -nargs=?                                     TTSetOwner          python trac.ticket.set_attr(<f-args>, 'owner')
     com! -nargs=+                                     TTSetSummary        python trac.ticket.set_summary(<q-args>)
 
     com! -nargs=0                                     TTUpdateDescrption  python trac.ticket.update_description()
 
-    com! -nargs=? -complete=customlist,ComMilestone   TTFilterMilestone   python trac.ticket.filter.add(<f-args>, 'milestone' )
-    com! -nargs=? -complete=customlist,ComType        TTFilterType        python trac.ticket.filter.add(<f-args>, 'type' )
-    com! -nargs=? -complete=customlist,ComStatus      TTFilterStatus      python trac.ticket.filter.add(<f-args>, 'status' )
-    com! -nargs=? -complete=customlist,ComResolution  TTFilterResolution  python trac.ticket.filter.add(<f-args>, 'resolution' )
-    com! -nargs=? -complete=customlist,ComPriority    TTFilterPriority    python trac.ticket.filter.add(<f-args>, 'priority' )
-    com! -nargs=? -complete=customlist,ComSeverity    TTFilterSeverity    python trac.ticket.filter.add(<f-args>, 'severity' )
-    com! -nargs=? -complete=customlist,ComComponent   TTFilterComponent   python trac.ticket.filter.add(<f-args>, 'component' )
-    com! -nargs=?                                     TTFilterOwner       python trac.ticket.filter.add(<f-args>, 'owner' )
+    com! -nargs=? -complete=customlist,ComMilestone   TTFilterMilestone   python trac.ticket.filter.add(<f-args>, 'milestone')
+    com! -nargs=? -complete=customlist,ComType        TTFilterType        python trac.ticket.filter.add(<f-args>, 'type')
+    com! -nargs=? -complete=customlist,ComStatus      TTFilterStatus      python trac.ticket.filter.add(<f-args>, 'status')
+    com! -nargs=? -complete=customlist,ComResolution  TTFilterResolution  python trac.ticket.filter.add(<f-args>, 'resolution')
+    com! -nargs=? -complete=customlist,ComPriority    TTFilterPriority    python trac.ticket.filter.add(<f-args>, 'priority')
+    com! -nargs=? -complete=customlist,ComSeverity    TTFilterSeverity    python trac.ticket.filter.add(<f-args>, 'severity')
+    com! -nargs=? -complete=customlist,ComComponent   TTFilterComponent   python trac.ticket.filter.add(<f-args>, 'component')
+    com! -nargs=?                                     TTFilterOwner       python trac.ticket.filter.add(<f-args>, 'owner')
 
-    com! -nargs=? -complete=customlist,ComMilestone   TTFilterNoMilestone python trac.ticket.filter.add('', 'milestone' )
-    com! -nargs=?                                     TTFilterNoOwner     python trac.ticket.filter.add('', 'owner' )
+    com! -nargs=? -complete=customlist,ComMilestone   TTFilterNoMilestone python trac.ticket.filter.add('', 'milestone')
+    com! -nargs=?                                     TTFilterNoOwner     python trac.ticket.filter.add('', 'owner')
 
-    com! -nargs=? -complete=customlist,ComMilestone   TTIgnoreMilestone   python trac.ticket.filter.add(<f-args>, 'milestone' ,False)
-    com! -nargs=? -complete=customlist,ComType        TTIgnoreType        python trac.ticket.filter.add(<f-args>, 'type' ,False)
-    com! -nargs=? -complete=customlist,ComStatus      TTIgnoreStatus      python trac.ticket.filter.add(<f-args>, 'status' ,False)
-    com! -nargs=? -complete=customlist,ComResolution  TTIgnoreResolution  python trac.ticket.filter.add(<f-args>, 'resolution' ,False)
-    com! -nargs=? -complete=customlist,ComPriority    TTIgnorePriority    python trac.ticket.filter.add(<f-args>, 'priority' ,False)
-    com! -nargs=? -complete=customlist,ComSeverity    TTIgnoreSeverity    python trac.ticket.filter.add(<f-args>, 'severity' ,False)
-    com! -nargs=? -complete=customlist,ComComponent   TTIgnoreComponent   python trac.ticket.filter.add(<f-args>, 'component' ,False)
-    com! -nargs=?                                     TTIgnoreOwner       python trac.ticket.filter.add(<f-args>, 'owner' ,False)
+    com! -nargs=? -complete=customlist,ComMilestone   TTIgnoreMilestone   python trac.ticket.filter.add(<f-args>, 'milestone', False)
+    com! -nargs=? -complete=customlist,ComType        TTIgnoreType        python trac.ticket.filter.add(<f-args>, 'type', False)
+    com! -nargs=? -complete=customlist,ComStatus      TTIgnoreStatus      python trac.ticket.filter.add(<f-args>, 'status', False)
+    com! -nargs=? -complete=customlist,ComResolution  TTIgnoreResolution  python trac.ticket.filter.add(<f-args>, 'resolution', False)
+    com! -nargs=? -complete=customlist,ComPriority    TTIgnorePriority    python trac.ticket.filter.add(<f-args>, 'priority', False)
+    com! -nargs=? -complete=customlist,ComSeverity    TTIgnoreSeverity    python trac.ticket.filter.add(<f-args>, 'severity', False)
+    com! -nargs=? -complete=customlist,ComComponent   TTIgnoreComponent   python trac.ticket.filter.add(<f-args>, 'component', False)
+    com! -nargs=?                                     TTIgnoreOwner       python trac.ticket.filter.add(<f-args>, 'owner', False)
 
-    com! -nargs=? -complete=customlist,ComMilestone   TTIgnoreNoMilestone python trac.ticket.filter.add('', 'milestone' ,False)
-    com! -nargs=?                                     TTIgnoreNoOwner     python trac.ticket.filter.add('', 'owner' ,False)
+    com! -nargs=? -complete=customlist,ComMilestone   TTIgnoreNoMilestone python trac.ticket.filter.add('', 'milestone', False)
+    com! -nargs=?                                     TTIgnoreNoOwner     python trac.ticket.filter.add('', 'owner', False)
 
     com! -nargs=0                                     TTClearAllFilters   python trac.ticket.filter.clear()
     com! -nargs=*                                     TTClearFilter       python trac.ticket.filter.delete(<f-args>)
@@ -312,7 +310,7 @@ fun LoadTicketCommands()
     com! -nargs=? -complete=customlist,ComSort        TTSortby            python trac.ticket.sort.set_sortby(<f-args>)
 
     "Ticket Attachments
-    com! -nargs=? -complete=customlist,ComAttachments TTGetAttachment     python trac.get_attachment (<f-args>)
+    com! -nargs=? -complete=customlist,ComAttachments TTGetAttachment     python trac.get_attachment(<f-args>)
     com! -nargs=? -complete=file                      TTAddAttachment     python trac.add_attachment(<f-args>)
     "Html Preview
     com! -nargs=0                                     TTPreview           python trac.preview()
@@ -325,11 +323,11 @@ fun LoadTicketCommands()
 
     "Ticket resolution
     com! -nargs=*                                     TTCloseTicket       python trac.ticket.close_ticket(<q-args>)
-    com! -nargs=*                                     TTResolveFixed      python trac.ticket.resolve_ticket(<q-args>,'fixed')
-    com! -nargs=*                                     TTResolveWontfix    python trac.ticket.resolve_ticket(<q-args>,'wontfix')
-    com! -nargs=*                                     TTResolveDuplicate  python trac.ticket.resolve_ticket(<q-args>,'duplicate')
-    com! -nargs=*                                     TTResolveInvalid    python trac.ticket.resolve_ticket(<q-args>,'invalid')
-    com! -nargs=*                                     TTResolveWorksForMe python trac.ticket.resolve_ticket(<q-args>,'worksforme')
+    com! -nargs=*                                     TTResolveFixed      python trac.ticket.resolve_ticket(<q-args>, 'fixed')
+    com! -nargs=*                                     TTResolveWontfix    python trac.ticket.resolve_ticket(<q-args>, 'wontfix')
+    com! -nargs=*                                     TTResolveDuplicate  python trac.ticket.resolve_ticket(<q-args>, 'duplicate')
+    com! -nargs=*                                     TTResolveInvalid    python trac.ticket.resolve_ticket(<q-args>, 'invalid')
+    com! -nargs=*                                     TTResolveWorksForMe python trac.ticket.resolve_ticket(<q-args>, 'worksforme')
 endfun
 
 fun UnloadTicketCommands()
@@ -398,69 +396,66 @@ fun UnloadTicketCommands()
 endfun
 
 "MISCELLANEOUS
-com! -nargs=+                                     TSearch         python trac.search_view(<q-args>)
-com! -nargs=1                                     TChangesetOpen  python trac.changeset_view(<f-args>)
-com! -nargs=0                                     TTimelineOpen   python trac.timeline_view()
-com! -nargs=0                                     TClose          python trac.normal_view(<f-args>)
+com! -nargs=+ TSearch         python trac.search_view(<q-args>)
+com! -nargs=1 TChangesetOpen  python trac.changeset_view(<f-args>)
+com! -nargs=0 TTimelineOpen   python trac.timeline_view()
+com! -nargs=0 TClose          python trac.normal_view(<f-args>)
 
 "FUNCTION COMPLETES
-fun ComTracServers (A,L,P)
-    return filter (keys(g:tracServerList), 'v:val =~ "^'.a:A.'"')
+fun ComTracServers(A, L, P)
+    return filter(keys(g:tracServerList), 'v:val =~ "^' . a:A . '"')
 endfun
 
 let g:tracOptions = 1
 
-fun ComAttachments (A,L,P)
+fun ComAttachments(A, L, P)
     python trac.list_attachments()
-
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
-fun ComWiki  (A,L,P)
+fun ComWiki(A, L, P)
     python trac.wiki.get_options()
-
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
 "COMMAND COMPLETES
-fun ComMilestone  (A,L,P)
+fun ComMilestone(A, L, P)
     python trac.ticket.get_options(0)
-
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
-fun ComType  (A,L,P)
+fun ComType(A, L, P)
     python trac.ticket.get_options(1)
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
-fun ComStatus  (A,L,P)
+fun ComStatus(A, L, P)
     python trac.ticket.get_options(2)
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
-fun ComResolution  (A,L,P)
+fun ComResolution(A, L, P)
     python trac.ticket.get_options(3)
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
-fun ComPriority  (A,L,P)
+fun ComPriority(A, L, P)
     python trac.ticket.get_options(4)
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
-fun ComSeverity  (A,L,P)
+fun ComSeverity(A, L, P)
     python trac.ticket.get_options(5)
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
-fun ComComponent  (A,L,P)
+fun ComComponent(A, L, P)
     python trac.ticket.get_options(6)
-    return filter (split (g:tracOptions, '|' ), 'v:val =~ "^' . a:A . '"')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
-fun ComSort (A,L,P)
-    return filter (['priority','milestone'], 'v:val =~ "^' . a:A . '"')
+fun ComSort(A, L, P)
+    return filter(['priority','milestone'], 'v:val =~ "^' . a:A . '"')
 endfun
 
 
