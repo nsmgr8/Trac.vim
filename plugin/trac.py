@@ -530,6 +530,7 @@ class TracTicket(TracRPC):
         multicall.ticket.priority.getAll()
         multicall.ticket.severity.getAll()
         multicall.ticket.component.getAll()
+        multicall.ticket.version.getAll()
 
         attribs = []
         for option in  multicall():
@@ -556,7 +557,6 @@ class TracTicket(TracRPC):
             tickets = multicall()
             self.tickets = tickets
 
-        tickets = self.sort.sort(tickets)
         if summary:
             ticket_list = []
         else:
@@ -573,7 +573,7 @@ class TracTicket(TracRPC):
                     str_ticket = [""]
                     str_ticket.append("Ticket:>> {0}".format(ticket[0]))
                 for f in ('summary', 'priority', 'status', 'component',
-                          'milestone', 'type', 'owner'):
+                          'milestone', 'type', 'version', 'owner'):
                     v = ticket[3].get(f, '')
                     if not summary:
                         v = "   * {0}: {1}".format(f.title(), v)
@@ -581,7 +581,6 @@ class TracTicket(TracRPC):
 
                 if not summary and self.session_is_present(ticket[0]):
                     str_ticket.append("   * Session: PRESENT")
-                str_ticket.append(ticket[3]["description"])
                 separator = ' || ' if summary else '\n'
                 ticket_list.append(separator.join(str_ticket))
 
@@ -589,17 +588,21 @@ class TracTicket(TracRPC):
 
     def get_ticket(self, id):
         """ Get Ticket Page """
-        id = int(id)
-        ticket = self.server.ticket.get(id)
-        ticket_changelog = self.server.ticket.changeLog(id)
-        actions = self.server.ticket.getActions(id)
+        try:
+            id = int(id)
+            ticket = self.server.ticket.get(id)
+            ticket_changelog = self.server.ticket.changeLog(id)
+            actions = self.server.ticket.getActions(id)
+        except:
+            return 'Please select a ticket'
+
         self.current_ticket_id = id
-        self.current_component = ticket[3]["component"]
+        self.current_component = ticket[3].get("component")
         self.list_attachments()
 
         str_ticket = ["= Ticket Summary =", ""]
         str_ticket.append(" *   Ticket ID: {0}".format(ticket[0]))
-        for f in ('owner', 'status', 'summary', 'type', 'priority',
+        for f in ('owner', 'reporter', 'status', 'summary', 'type', 'priority',
                   'component', 'milestone', 'version'):
             v = ticket[3].get(f, '')
             str_ticket.append(" *{0:>12}: {1}".format(f.title(), v))
@@ -1367,6 +1370,9 @@ class Trac:
             m = re.search(r'^([0123456789]+)', vim.current.line)
             id = int(m.group(0))
 
+        if not id:
+            id = self.ticket.current_ticket_id
+
         self.normal_view()
         self.uiticket.open()
 
@@ -1381,17 +1387,7 @@ class Trac:
                                                 b_use_cache))
 
         self.uiticket.ticketwindow.clean()
-
-        if id:
-            self.uiticket.ticketwindow.write(self.ticket.get_ticket(id))
-        else:
-            if self.ticket.current_ticket_id:
-                self.uiticket.ticketwindow.write(self.ticket.get_ticket(
-                                                trac.ticket.current_ticket_id))
-            else:
-                self.uiticket.ticketwindow.write("Select Ticket To Load")
-            #This sets the cursor to the TOC if theres no active ticket
-            vim.command("wincmd h")
+        self.uiticket.ticketwindow.write(self.ticket.get_ticket(id))
         #self.ticket.list_attachments()
 
         if not self.ticket.attribs:
