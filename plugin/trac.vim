@@ -319,6 +319,7 @@ fun LoadTicketCommands()
     com! -nargs=0                                     TTNextPage          python trac.ticket_paginate()
     com! -nargs=0                                     TTPreviousPage      python trac.ticket_paginate(-1)
     com! -nargs=0                                     TTFirstPage         python trac.ticket.page = 1; trac.ticket_view()
+    com! -nargs=0                                     TTNumberTickets     python print trac.ticket.number_tickets()
 
     "Ticket Attachments
     com! -nargs=? -complete=customlist,ComAttachments TTGetAttachment     python trac.get_attachment(<f-args>)

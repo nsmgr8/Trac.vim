@@ -554,6 +554,12 @@ class TracTicket(TracRPC):
     def set_sort_attr(self, attrib, value):
         self.sorter[attrib] = value
 
+    def number_tickets(self):
+        clause = 'max=0&order={order}&group={group}&page={page}'
+        clause = clause.format(page=self.page, **self.sorter)
+        clause = '{0}&{1}'.format(clause, vim.eval('g:tracTicketClause'))
+        return len(self.server.ticket.query(clause))
+
     def get_all_tickets(self, summary=True, b_use_cache=False):
         """ Gets a List of Ticket Pages """
         if not self.attribs:
@@ -1392,7 +1398,7 @@ class Trac:
         try:
             self.ticket.page += direction
             self.ticket_view()
-        except xmlrpclib.Fault:
+        except:
             self.ticket.page -= direction
             print 'cannot go beyond current page'
 
