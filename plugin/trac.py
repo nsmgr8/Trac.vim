@@ -540,16 +540,7 @@ class TracTicket(TracRPC):
         multicall.ticket.severity.getAll()
         multicall.ticket.component.getAll()
         multicall.ticket.version.getAll()
-
-        attribs = []
-        for option in multicall():
-            attribs.append(option)
-
-        for milestone in attribs[0]:
-            multicall.ticket.milestone.get(milestone)
-
-        attribs.append(multicall())
-        self.attribs = attribs
+        self.attribs = [option for option in multicall()]
 
     def set_sort_attr(self, attrib, value):
         self.sorter[attrib] = value
@@ -1248,12 +1239,15 @@ class TracTimelineWindow(NonEditableWindow):
 
 class Trac:
     """ Main Trac class """
-    def __init__(self, comment, server_list):
+    def __init__(self):
         """ initialize Trac """
-        self.server_list = server_list
-        self.server_url = server_list.values()[0]
-        self.server_name = server_list.keys()[0]
+        self.server_list = vim.eval('g:tracServerList')
+        self.server_url = self.server_list.values()[0]
+        self.server_name = self.server_list.keys()[0]
 
+        comment = vim.eval('tracDefaultComment')
+        if not comment:
+            comment = 'VimTrac update'
         self.default_comment = comment
 
         self.wiki = TracWiki(self.server_url)
@@ -1525,10 +1519,4 @@ class Trac:
 def trac_init():
     """ Initialize Trac Environment """
     global trac
-
-    comment = vim.eval('tracDefaultComment')
-    if not comment:
-        comment = 'VimTrac update'
-
-    server_list = vim.eval('g:tracServerList')
-    trac = Trac(comment, server_list)
+    trac = Trac()
