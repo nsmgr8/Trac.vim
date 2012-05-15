@@ -518,6 +518,7 @@ class TracTicket(TracRPC):
         self.attribs = []
         self.tickets = []
         self.sorter = {'order': 'priority', 'group': 'milestone'}
+        self.page = 1
         self.filter = TracTicketFilter()
 
     def get_attribs(self):
@@ -533,7 +534,7 @@ class TracTicket(TracRPC):
         multicall.ticket.version.getAll()
 
         attribs = []
-        for option in  multicall():
+        for option in multicall():
             attribs.append(option)
 
         for milestone in attribs[0]:
@@ -554,8 +555,9 @@ class TracTicket(TracRPC):
             tickets = self.tickets
         else:
             multicall = xmlrpclib.MultiCall(self.server)
-            sorter = 'order={order}&group={group}'.format(**self.sorter)
-            clause = '{0}&{1}'.format(sorter, vim.eval('g:tracTicketClause'))
+            clause = 'order={order}&group={group}&page={page}'
+            clause = clause.format(page=self.page, **self.sorter)
+            clause = '{0}&{1}'.format(clause, vim.eval('g:tracTicketClause'))
             for ticket in self.server.ticket.query(clause):
                 multicall.ticket.get(ticket)
             tickets = multicall()
@@ -1376,6 +1378,14 @@ class Trac:
     def sort_ticket(self, sorter, attr):
         self.ticket.set_sort_attr(sorter, attr)
         self.ticket_view()
+
+    def ticket_paginate(self, direction=1):
+        try:
+            self.ticket.page += direction
+            self.ticket_view()
+        except xmlrpclib.Fault:
+            self.ticket.page -= direction
+            print 'cannot go beyond current page'
 
     def server_view(self):
         """ Display's The Server list view """

@@ -310,6 +310,11 @@ fun LoadTicketCommands()
     com! -nargs=? -complete=customlist,ComSort        TTOrderBy           python trac.sort_ticket('order', <f-args>)
     com! -nargs=? -complete=customlist,ComSort        TTGroupBy           python trac.sort_ticket('group', <f-args>)
 
+    " Ticket pagination
+    com! -nargs=0                                     TTNextPage          python trac.ticket_paginate()
+    com! -nargs=0                                     TTPreviousPage      python trac.ticket_paginate(-1)
+    com! -nargs=0                                     TTFirstPage         python trac.ticket.page = 1; trac.ticket_view()
+
     "Ticket Attachments
     com! -nargs=? -complete=customlist,ComAttachments TTGetAttachment     python trac.get_attachment(<f-args>)
     com! -nargs=? -complete=file                      TTAddAttachment     python trac.add_attachment(<f-args>)
