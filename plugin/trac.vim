@@ -189,6 +189,10 @@ if !exists('g:tracTicketStyle')
     let g:tracTicketStyle   = 'summary' " 'full'  'top' 'left' 'right' 'full'
 endif
 
+if !exists('g:tracUseTab')
+    let g:tracUseTab = 1
+endif
+
 "Leader Short CUTS (Uncomment or add and customise to yout vimrc)
 "Open Wiki
 " map <leader>to :TWOpen<cr>
@@ -286,6 +290,7 @@ fun LoadTicketCommands()
     com! -nargs=? -complete=customlist,ComPriority    TTFilterPriority    python trac.ticket.filter.add(<f-args>, 'priority')
     com! -nargs=? -complete=customlist,ComSeverity    TTFilterSeverity    python trac.ticket.filter.add(<f-args>, 'severity')
     com! -nargs=? -complete=customlist,ComComponent   TTFilterComponent   python trac.ticket.filter.add(<f-args>, 'component')
+    com! -nargs=? -complete=customlist,ComVersion     TTFilterVersion     python trac.ticket.filter.add(<f-args>, 'version')
     com! -nargs=?                                     TTFilterOwner       python trac.ticket.filter.add(<f-args>, 'owner')
 
     com! -nargs=? -complete=customlist,ComMilestone   TTFilterNoMilestone python trac.ticket.filter.add('', 'milestone')
@@ -458,6 +463,11 @@ endfun
 
 fun ComComponent(A, L, P)
     python trac.ticket.get_options(6)
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
+endfun
+
+fun ComVersion(A, L, P)
+    python trac.ticket.get_options(7)
     return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 

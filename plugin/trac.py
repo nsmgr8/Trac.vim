@@ -10,6 +10,13 @@ import codecs
 trac, browser, mode = [None] * 3
 
 
+def truncate_words(text, num_words=10):
+    words = text.split()
+    if len(words) <= num_words:
+        return text
+    return ' '.join(words[:num_words]) + '...'
+
+
 class HTTPDigestTransport(xmlrpclib.SafeTransport):
     """
     Transport that uses urllib2 so that we can do Digest authentication.
@@ -322,7 +329,8 @@ class TracWikiUI(UI):
         style = vim.eval('g:tracWikiStyle')
 
         if style == 'full':
-            vim.command('tabnew')
+            if int(vim.eval('g:tracUseTab')):
+                vim.command('tabnew')
             self.wikiwindow.create(' 30 vnew')
             vim.command('call TracOpenViewCallback()')
             vim.command("only")
@@ -580,7 +588,7 @@ class TracTicket(TracRPC):
                     str_ticket.append("Ticket:>> {0}".format(ticket[0]))
                 for f in ('summary', 'priority', 'status', 'component',
                           'milestone', 'type', 'version', 'owner'):
-                    v = ticket[3].get(f, '')
+                    v = truncate_words(ticket[3].get(f, ''))
                     if not summary:
                         v = "   * {0}: {1}".format(f.title(), v)
                     str_ticket.append(v)
@@ -1061,7 +1069,8 @@ class TracTicketUI(UI):
             self.ticketwindow.create("vertical belowright new")
             self.commentwindow.create("vertical belowright new")
         elif style == 'summary':
-            vim.command('tabnew')
+            if int(vim.eval('g:tracUseTab')):
+                vim.command('tabnew')
             self.ticketwindow.create('vertical belowright new')
             vim.command('call TracOpenViewCallback()')
             vim.command('only')
