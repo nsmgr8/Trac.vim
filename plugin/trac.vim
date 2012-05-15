@@ -307,7 +307,8 @@ fun LoadTicketCommands()
     com! -nargs=*                                     TTClearFilter       python trac.ticket.filter.delete(<f-args>)
     com! -nargs=*                                     TTListFilters       python trac.ticket.filter.list()
     "Ticket Sorting
-    com! -nargs=? -complete=customlist,ComSort        TTSortby            python trac.ticket.sort.set_sortby(<f-args>)
+    com! -nargs=? -complete=customlist,ComSort        TTOrderBy           python trac.sort_ticket('order', <f-args>)
+    com! -nargs=? -complete=customlist,ComSort        TTGroupBy           python trac.sort_ticket('group', <f-args>)
 
     "Ticket Attachments
     com! -nargs=? -complete=customlist,ComAttachments TTGetAttachment     python trac.get_attachment(<f-args>)
@@ -361,7 +362,8 @@ fun UnloadTicketCommands()
         delc TTClearFilter
         delc TTClearAllFilters
 
-        delc TTSortby
+        delc TTOrderBy
+        delc TTGroupBy
 
         delc TTIgnoreMilestone
         delc TTIgnoreType
@@ -455,7 +457,7 @@ fun ComComponent(A, L, P)
 endfun
 
 fun ComSort(A, L, P)
-    return filter(['priority','milestone'], 'v:val =~ "^' . a:A . '"')
+    return filter(['component', 'milestone', 'owner', 'priority', 'reporter', 'status', 'type', 'version'], 'v:val =~ "^' . a:A . '"')
 endfun
 
 

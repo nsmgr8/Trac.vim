@@ -517,8 +517,8 @@ class TracTicket(TracRPC):
         self.current_ticket_id = False
         self.attribs = []
         self.tickets = []
+        self.sorter = {'order': 'priority', 'group': 'milestone'}
         self.filter = TracTicketFilter()
-        self.sort = TracTicketSort()
 
     def get_attribs(self):
         """ Get all milestone/ priority /status options """
@@ -542,6 +542,9 @@ class TracTicket(TracRPC):
         attribs.append(multicall())
         self.attribs = attribs
 
+    def set_sort_attr(self, attrib, value):
+        self.sorter[attrib] = value
+
     def get_all_tickets(self, summary=True, b_use_cache=False):
         """ Gets a List of Ticket Pages """
         if not self.attribs:
@@ -551,7 +554,8 @@ class TracTicket(TracRPC):
             tickets = self.tickets
         else:
             multicall = xmlrpclib.MultiCall(self.server)
-            clause = vim.eval('g:tracTicketClause')
+            sorter = 'order={order}&group={group}'.format(**self.sorter)
+            clause = '{0}&{1}'.format(sorter, vim.eval('g:tracTicketClause'))
             for ticket in self.server.ticket.query(clause):
                 multicall.ticket.get(ticket)
             tickets = multicall()
@@ -946,30 +950,6 @@ class TracTicket(TracRPC):
         trac.uiticket.summarywindow.create('belowright 10 new')
         trac.uiticket.summarywindow.write(self.get_all_tickets(True, False))
         trac.uiticket.mode = 2
-
-
-class TracTicketSort:
-    sortby = 'milestone'
-
-    def sort(self, tickets):
-        """ Ticket sorting TODO should probably use python sort"""
-        if self.sortby == 'priority':
-            return tickets
-
-        sorted_tickets = []
-        for milestone in trac.ticket.attribs[0]:
-            for ticket in tickets:
-                if ticket[3]['milestone'] == milestone:
-                    sorted_tickets.append(ticket)
-        #append tickets without milestones
-        for ticket in tickets:
-            if not ticket[3]['milestone']:
-                sorted_tickets.append(ticket)
-        return sorted_tickets
-
-    def set_sortby(self, sort_option):
-        self.sortby = sort_option
-        trac.ticket_view()
 
 
 class TracTicketFilter:
@@ -1392,6 +1372,10 @@ class Trac:
 
         if not self.ticket.attribs:
             self.ticket.get_attribs()
+
+    def sort_ticket(self, sorter, attr):
+        self.ticket.set_sort_attr(sorter, attr)
+        self.ticket_view()
 
     def server_view(self):
         """ Display's The Server list view """
