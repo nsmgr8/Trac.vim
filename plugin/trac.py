@@ -7,7 +7,7 @@ import re
 import codecs
 
 
-trac, browser, mode = [None] * 3
+trac = None
 
 
 def truncate_words(text, num_words=10):
@@ -280,7 +280,7 @@ class TracWiki(TracRPC):
         with codecs.open(file_name, 'w', 'utf-8') as fp:
             fp.write(html)
 
-        global browser
+        browser = vim.eval('g:tracBrowser')
         vim.command('!{0} file://{1}'.format(browser, file_name))
 
     def get_options(self):
@@ -1482,7 +1482,6 @@ class Trac:
 
     def preview(self, b_dump=False):
         """ browser view of current wiki buffer """
-        global browser
         if self.uiwiki.mode == 1 and self.wiki.current_page:
             print "Retrieving preview from wiki", self.wiki.current_page
             wikitext = self.uiwiki.wikiwindow.dump()
@@ -1508,7 +1507,8 @@ class Trac:
             vim.command('set ft=text')
             vim.command('norm gg')
         else:
-            vim.command('!' + browser + " file://" + file_name)
+            browser = vim.eval('g:tracBrowser')
+            vim.command('!{0} file://{1}'.format(browser, file_name))
 
     def changeset_view(self, changeset):
         changeset = '{scheme}://{server}/changeset/{changeset}'.format(
@@ -1525,19 +1525,10 @@ class Trac:
 def trac_init():
     """ Initialize Trac Environment """
     global trac
-    global browser
 
-    # get needed vim variables
     comment = vim.eval('tracDefaultComment')
     if not comment:
         comment = 'VimTrac update'
 
     server_list = vim.eval('g:tracServerList')
     trac = Trac(comment, server_list)
-    browser = vim.eval('g:tracBrowser')
-
-
-def trac_window_resize():
-    global mode
-    mode = (mode + 1) % 3
-    vim.command("wincmd {0}".format(['=', '|', '_'][mode]))
