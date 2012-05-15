@@ -526,8 +526,8 @@ class TracTicket(TracRPC):
         self.attribs = []
         self.tickets = []
         self.sorter = {'order': 'priority', 'group': 'milestone'}
+        self.filters = {}
         self.page = 1
-        self.filter = TracTicketFilter()
 
     def get_attribs(self):
         """ Get all milestone/ priority /status options """
@@ -554,11 +554,19 @@ class TracTicket(TracRPC):
     def set_sort_attr(self, attrib, value):
         self.sorter[attrib] = value
 
-    def number_tickets(self):
-        clause = 'max=0&order={order}&group={group}&page={page}'
+    def query_string(self, f_all=False):
+        clause = 'order={order}&group={group}&page={page}'
         clause = clause.format(page=self.page, **self.sorter)
         clause = '{0}&{1}'.format(clause, vim.eval('g:tracTicketClause'))
-        return len(self.server.ticket.query(clause))
+        filters = ['{0}={1}'.format(k, v) for k, v in self.filters.iteritems()]
+        if filters:
+            clause = '{0}&{1}'.format(clause, '&'.join(filters))
+        if f_all:
+            clause = '{0}&max=0'.format(clause)
+        return clause
+
+    def number_tickets(self):
+        return len(self.server.ticket.query(self.query_string(True)))
 
     def get_all_tickets(self, summary=True, b_use_cache=False):
         """ Gets a List of Ticket Pages """
@@ -569,10 +577,7 @@ class TracTicket(TracRPC):
             tickets = self.tickets
         else:
             multicall = xmlrpclib.MultiCall(self.server)
-            clause = 'order={order}&group={group}&page={page}'
-            clause = clause.format(page=self.page, **self.sorter)
-            clause = '{0}&{1}'.format(clause, vim.eval('g:tracTicketClause'))
-            for ticket in self.server.ticket.query(clause):
+            for ticket in self.server.ticket.query(self.query_string()):
                 multicall.ticket.get(ticket)
             tickets = multicall()
             self.tickets = tickets
@@ -581,28 +586,27 @@ class TracTicket(TracRPC):
             ticket_list = []
         else:
             ticket_list = ["Hit <enter> or <space> on a line containing :>>"]
-            if self.filter.filters:
-                ticket_list.append("(filtered)")
-                ticket_list.append(self.filter.list())
+            #if self.filter.filters:
+                #ticket_list.append("(filtered)")
+                #ticket_list.append(self.filter.list())
 
         for ticket in tickets:
-            if ticket[3]["status"] != "closed" and self.filter.check(ticket):
-                if summary:
-                    str_ticket = [str(ticket[0])]
-                else:
-                    str_ticket = [""]
-                    str_ticket.append("Ticket:>> {0}".format(ticket[0]))
-                for f in ('summary', 'priority', 'status', 'component',
-                          'milestone', 'type', 'version', 'owner'):
-                    v = truncate_words(ticket[3].get(f, ''))
-                    if not summary:
-                        v = "   * {0}: {1}".format(f.title(), v)
-                    str_ticket.append(v)
+            if summary:
+                str_ticket = [str(ticket[0])]
+            else:
+                str_ticket = [""]
+                str_ticket.append("Ticket:>> {0}".format(ticket[0]))
+            for f in ('summary', 'priority', 'status', 'component',
+                        'milestone', 'type', 'version', 'owner'):
+                v = truncate_words(ticket[3].get(f, ''))
+                if not summary:
+                    v = "   * {0}: {1}".format(f.title(), v)
+                str_ticket.append(v)
 
-                if not summary and self.session_is_present(ticket[0]):
-                    str_ticket.append("   * Session: PRESENT")
-                separator = ' || ' if summary else '\n'
-                ticket_list.append(separator.join(str_ticket))
+            if not summary and self.session_is_present(ticket[0]):
+                str_ticket.append("   * Session: PRESENT")
+            separator = ' || ' if summary else '\n'
+            ticket_list.append(separator.join(str_ticket))
 
         return "\n".join(ticket_list)
 
@@ -966,60 +970,6 @@ class TracTicket(TracRPC):
         trac.uiticket.summarywindow.create('belowright 10 new')
         trac.uiticket.summarywindow.write(self.get_all_tickets(True, False))
         trac.uiticket.mode = 2
-
-
-class TracTicketFilter:
-    def __init__(self):
-        self.filters = []
-
-    def add(self,  keyword, attribute, b_whitelist=True,
-            b_refresh_ticket=True):
-        self.filters.append({'attr': attribute, 'key': keyword,
-                             'whitelist': b_whitelist})
-        if b_refresh_ticket:
-            self.refresh_tickets()
-
-    def clear(self):
-        self.filters = []
-        self.refresh_tickets()
-
-    def delete(self, number):
-        number = int(number)
-        try:
-            del self.filters[number - 1]
-        except:
-            return
-        self.refresh_tickets()
-
-    def list(self):
-        if not self.filters:
-            return ''
-
-        i = 0
-        str_list = ""
-        for filter in self.filters:
-            i += 1
-            is_whitelist = 'whitelist'
-            if not filter['whitelist']:
-                is_whitelist = 'blacklist'
-            str_list += '    ' + str(i) + '. ' + filter['attr'] + ': ' \
-                    + filter['key'] + " : " + is_whitelist + "\n"
-
-        return str_list
-
-    def check(self, ticket):
-        for filter in self.filters:
-            if ticket[3][filter['attr']] == filter['key']:
-                if not filter['whitelist']:
-                    return False
-            else:
-                if filter['whitelist']:
-                    return False
-        return True
-
-    def refresh_tickets(self):
-        global trac
-        trac.ticket_view(trac.ticket.current_ticket_id, True)
 
 
 class TracTicketUI(UI):
@@ -1392,6 +1342,18 @@ class Trac:
 
     def sort_ticket(self, sorter, attr):
         self.ticket.set_sort_attr(sorter, attr)
+        self.ticket_view()
+
+    def filter_ticket(self, attrib, value, ignore=False):
+        self.ticket.filters[attrib] = '{0}{1}'.format('!' if ignore else '',
+                                                      value)
+        self.ticket_view()
+
+    def filter_clear(self, attrib=None):
+        if attrib:
+            del self.ticket.filters[attrib]
+        else:
+            self.ticket.filters = {}
         self.ticket_view()
 
     def ticket_paginate(self, direction=1):
