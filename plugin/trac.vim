@@ -226,14 +226,7 @@ endif
 "WIKI MODULE COMMANDS
 
 let g:tracDefaultView = 'wiki' " 'ticket' 'timeline'
-com! -nargs=+ -complete=customlist,ComTracServers TWServer  python trac.set_current_server(<q-args>)
-com! -nargs=+ -complete=customlist,ComTracServers TTServer  python trac.set_current_server(<q-args>, False, 'ticket')
-com! -nargs=+ -complete=customlist,ComTracServers TTLServer python trac.set_current_server(<q-args>, False, 'timeline')
-
-"QuickTicket Option (modify this command for your own servers) - Note Ticket #12
-com! -nargs=+ TQTaskOnVimTrac    python trac.ticket.create(<q-args>, 'task', 'Vim Trac')
-com! -nargs=+ TQDefectOnVimTrac  python trac.ticket.create(<q-args>, 'defect', 'Vim Trac')
-com! -nargs=+ TQEnhanceOnVimTrac python trac.ticket.create(<q-args>, 'enhancement', 'Vim Trac')
+com! -nargs=+ -complete=customlist,ComTracServers TracServer  python trac.set_server(<q-args>)
 
 com! -nargs=? -complete=customlist,ComWiki TWOpen python trac.wiki_view(<f-args>)
 

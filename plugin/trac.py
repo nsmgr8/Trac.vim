@@ -46,35 +46,6 @@ class HTTPDigestTransport(xmlrpclib.SafeTransport):
         return self.parse_response(f)
 
 
-class TracRPC(object):
-    """ General xmlrpc RPC routines """
-    def __init__(self, server_url):
-        if 'server' in server_url:
-            self.set_server(server_url)
-        else:
-            print 'Please provide your trac server address'
-
-    def set_server(self, url):
-        self.server_url = {
-            'scheme': url.get('scheme', 'http'),
-            'server': url['server'],
-            'rpc_path': url.get('rpc_path', 'login/rpc'),
-            'auth': url.get('auth', ''),
-        }
-        scheme = url.get('scheme', 'http')
-        auth = url.get('auth', '').split(':')
-
-        if len(auth) == 2:  # Basic authentication
-            url = '{scheme}://{auth}@{server}{rpc_path}'.format(**url)
-        else:   # Anonymous or Digest authentication
-            url = '{scheme}://{server}{rpc_path}'.format(**url)
-        if len(auth) == 3:  # Digest authentication
-            transport = HTTPDigestTransport(scheme, *auth)
-            self.server = xmlrpclib.ServerProxy(url, transport=transport)
-        else:
-            self.server = xmlrpclib.ServerProxy(url)
-
-
 class VimWindow(object):
     """ wrapper class of window of vim """
     def __init__(self, name='WINDOW'):
@@ -194,10 +165,12 @@ class UI(object):
         self.cursign = None
 
 
-class TracWiki(TracRPC):
+class TracWiki(object):
     """ Trac Wiki Class """
-    def __init__(self, server_url):
-        TracRPC.__init__(self, server_url)
+    def __init__(self):
+        self.reset_attrs()
+
+    def reset_attrs(self):
         self.pages = []
         self.revision = 1
         self.current_page = False
@@ -205,7 +178,7 @@ class TracWiki(TracRPC):
 
     def get_all_pages(self):
         """ Gets a List of Wiki Pages """
-        self.pages = self.server.wiki.getAllPages()
+        self.pages = trac.server.wiki.getAllPages()
         return "\n".join(self.pages)
 
     def get_page(self, name, revision=None):
@@ -216,9 +189,9 @@ class TracWiki(TracRPC):
             if name not in self.visited_pages:
                 self.visited_pages.append(name)
             if revision is not None:
-                wikitext = self.server.wiki.getPage(name, revision)
+                wikitext = trac.server.wiki.getPage(name, revision)
             else:
-                wikitext = self.server.wiki.getPage(name)
+                wikitext = trac.server.wiki.getPage(name)
         except:
             wikitext = "Describe {0} here.".format(name)
         return wikitext
@@ -228,13 +201,13 @@ class TracWiki(TracRPC):
         global trac
         if not comment:
             comment = trac.default_comment
-        self.server.wiki.putPage(self.current_page,
+        trac.server.wiki.putPage(self.current_page,
                 trac.uiwiki.wikiwindow.dump(), {"comment": comment})
 
     def get_page_info(self):
         """ Returns page revision info most recent author """
         try:
-            info = self.server.wiki.getPageInfo(self.current_page)
+            info = trac.server.wiki.getPageInfo(self.current_page)
             self.revision = info['version']
             return '{name} v{version}, author: {author}'.format(**info)
         except:
@@ -242,18 +215,18 @@ class TracWiki(TracRPC):
 
     def create_page(self, name, content, comment):
         """ Saves a Wiki Page """
-        return self.server.wiki.putPage(name, content, {"comment": comment})
+        return trac.server.wiki.putPage(name, content, {"comment": comment})
 
     def add_attachment(self, file):
         """ Add attachment """
         file_name = os.path.basename(file)
         path = '{0}/{1}'.format(self.current_page, file_name)
-        self.server.wiki.putAttachment(path,
+        trac.server.wiki.putAttachment(path,
                 xmlrpclib.Binary(open(file).read()))
 
     def get_attachment(self, file):
         """ Get attachment """
-        buffer = self.server.wiki.getAttachment(file)
+        buffer = trac.server.wiki.getAttachment(file)
         file_name = os.path.basename(file)
 
         if os.path.exists(file_name):
@@ -264,18 +237,18 @@ class TracWiki(TracRPC):
 
     def list_attachments(self):
         """ Look for attachments on the current page """
-        self.attachments = self.server.wiki.listAttachments(self.current_page)
+        self.attachments = trac.server.wiki.listAttachments(self.current_page)
 
     def get_wiki_html(self, wikitext):
         """ Converts the wikitext from a buffer to html for previews """
-        return self.server.wiki.wikiToHtml(wikitext)
+        return trac.server.wiki.wikiToHtml(wikitext)
 
     def html_view(self, page=None):
         """ Displays a wiki in a preview browser as set in trac.vim """
         if not page:
             page = vim.current.line
 
-        html = self.server.wiki.getPageHTML(page)
+        html = trac.server.wiki.getPageHTML(page)
         file_name = vim.eval('g:tracTempHtml')
         with codecs.open(file_name, 'w', 'utf-8') as fp:
             fp.write(html)
@@ -444,14 +417,11 @@ class WikiVimDiffWindow(NonEditableWindow):
         vim.command('setlocal noswapfile')
 
 
-class TracSearch(TracRPC):
+class TracSearch(object):
     """ Search for tickets and Wiki's """
-    def __init__(self, server_url):
-        TracRPC.__init__(self, server_url)
-
     def search(self, search_pattern):
         """ Perform a search call  """
-        a_search = self.server.search.performSearch(search_pattern)
+        a_search = trac.server.search.performSearch(search_pattern)
         result = [
             "Results for {0}".format(search_pattern),
             "(Hit <enter> or <space> on a line containing :>>)",
@@ -518,10 +488,12 @@ class TracSearchWindow(NonEditableWindow):
         vim.command('syn match SpecialKey /^-*$/')
 
 
-class TracTicket(TracRPC):
+class TracTicket(object):
     """ Trac Ticket Class """
-    def __init__(self, server_url):
-        TracRPC.__init__(self, server_url)
+    def __init__(self):
+        self.reset_attrs()
+
+    def reset_attrs(self):
         self.current_ticket_id = False
         self.attribs = []
         self.tickets = []
@@ -531,7 +503,7 @@ class TracTicket(TracRPC):
 
     def get_attribs(self):
         """ Get all milestone/ priority /status options """
-        multicall = xmlrpclib.MultiCall(self.server)
+        multicall = xmlrpclib.MultiCall(trac.server)
         multicall.ticket.milestone.getAll()
         multicall.ticket.type.getAll()
         multicall.ticket.status.getAll()
@@ -557,7 +529,7 @@ class TracTicket(TracRPC):
         return clause
 
     def number_tickets(self):
-        return len(self.server.ticket.query(self.query_string(True)))
+        return len(trac.server.ticket.query(self.query_string(True)))
 
     def get_all_tickets(self, summary=True, b_use_cache=False):
         """ Gets a List of Ticket Pages """
@@ -567,8 +539,8 @@ class TracTicket(TracRPC):
         if b_use_cache:
             tickets = self.tickets
         else:
-            multicall = xmlrpclib.MultiCall(self.server)
-            for ticket in self.server.ticket.query(self.query_string()):
+            multicall = xmlrpclib.MultiCall(trac.server)
+            for ticket in trac.server.ticket.query(self.query_string()):
                 multicall.ticket.get(ticket)
             tickets = multicall()
             self.tickets = tickets
@@ -605,9 +577,9 @@ class TracTicket(TracRPC):
         """ Get Ticket Page """
         try:
             id = int(id)
-            ticket = self.server.ticket.get(id)
-            ticket_changelog = self.server.ticket.changeLog(id)
-            actions = self.server.ticket.getActions(id)
+            ticket = trac.server.ticket.get(id)
+            ticket_changelog = trac.server.ticket.changeLog(id)
+            actions = trac.server.ticket.getActions(id)
         except:
             return 'Please select a ticket'
 
@@ -676,22 +648,22 @@ class TracTicket(TracRPC):
 
     def update_ticket(self, comment, attribs={}, notify=False):
         """ add ticket comments change attributes """
-        return self.server.ticket.update(self.current_ticket_id, comment,
+        return trac.server.ticket.update(self.current_ticket_id, comment,
                                          attribs, notify)
 
     def create_ticket(self, description, summary, attributes={}):
         """ create a trac ticket """
-        self.current_ticket_id = self.server.ticket.create(summary,
+        self.current_ticket_id = trac.server.ticket.create(summary,
                 description, attributes, False)
 
     def add_attachment(self, file):
         """ Add attachment """
         file_name = os.path.basename(file)
-        self.server.ticket.putAttachment(self.current_ticket_id, file_name,
+        trac.server.ticket.putAttachment(self.current_ticket_id, file_name,
                 'attachment', xmlrpclib.Binary(open(file).read()))
 
     def list_attachments(self):
-        a_attach = self.server.ticket.listAttachments(self.current_ticket_id)
+        a_attach = trac.server.ticket.listAttachments(self.current_ticket_id)
         self.attachments = []
         for attach in a_attach:
             self.attachments.append(attach[0])
@@ -702,7 +674,7 @@ class TracTicket(TracRPC):
 
     def get_attachment(self, file):
         """ Get attachment """
-        buffer = self.server.ticket.getAttachment(self.current_ticket_id, file)
+        buffer = trac.server.ticket.getAttachment(self.current_ticket_id, file)
         file_name = os.path.basename(file)
 
         if os.path.exists(file_name):
@@ -766,17 +738,12 @@ class TracTicket(TracRPC):
         trac.uiticket.commentwindow.clean()
         trac.ticket_view(trac.ticket.current_ticket_id)
 
-    def create(self, summary='new ticket', type=False, server=False):
+    def create(self, summary='new ticket', type=False):
         """ writes comment window to a new  ticket  """
         global trac
-        #Used in quick tickets
-        if server:
-            trac.set_current_server(server, True, 'ticket')
-            description = ''
-        else:
-            description = trac.uiticket.commentwindow.dump()
+        description = trac.uiticket.commentwindow.dump()
 
-        if trac.uiticket.mode == 0 and not server:
+        if trac.uiticket.mode == 0:
             print "Can't create a ticket when not in Ticket View"
             return
 
@@ -1172,7 +1139,7 @@ class TracTimeline:
 
         query = 'ticket=on&changeset=on&wiki=on&max=50&daysback=90&format=rss'
         feed = '{scheme}://{server}/timeline?{query}'.format(query=query,
-                                                        **trac.wiki.server_url)
+                                                        **trac.server_url)
         d = feedparser.parse(feed)
         str_feed = ["Hit <enter> or <space> on a line containing :>>", ""]
         for item in d['items']:
@@ -1237,22 +1204,13 @@ class TracTimelineWindow(NonEditableWindow):
         vim.command('setlocal noswapfile')
 
 
-class Trac:
+class Trac(object):
     """ Main Trac class """
     def __init__(self):
         """ initialize Trac """
-        self.server_list = vim.eval('g:tracServerList')
-        self.server_url = self.server_list.values()[0]
-        self.server_name = self.server_list.keys()[0]
-
-        comment = vim.eval('tracDefaultComment')
-        if not comment:
-            comment = 'VimTrac update'
-        self.default_comment = comment
-
-        self.wiki = TracWiki(self.server_url)
-        self.search = TracSearch(self.server_url)
-        self.ticket = TracTicket(self.server_url)
+        self.wiki = TracWiki()
+        self.search = TracSearch()
+        self.ticket = TracTicket()
         self.timeline = TracTimeline()
 
         self.uiwiki = TracWikiUI()
@@ -1261,7 +1219,40 @@ class Trac:
         self.uisearch = TracSearchUI()
         self.uitimeline = TracTimelineUI()
 
-        self.user = self.get_user(self.server_url)
+        self.server_list = vim.eval('g:tracServerList')
+        default_server = vim.eval('g:tracDefaultServer')
+        comment = vim.eval('tracDefaultComment')
+        if not comment:
+            comment = 'VimTrac update'
+
+        self.set_server(default_server)
+        self.default_comment = comment
+
+    def set_server(self, server):
+        url = self.server_list[server]
+        self.server_name = server
+        self.server_url = {
+            'scheme': url.get('scheme', 'http'),
+            'server': url['server'],
+            'rpc_path': url.get('rpc_path', 'login/rpc'),
+            'auth': url.get('auth', ''),
+        }
+        scheme = url.get('scheme', 'http')
+        auth = url.get('auth', '').split(':')
+
+        if len(auth) == 2:  # Basic authentication
+            url = '{scheme}://{auth}@{server}{rpc_path}'.format(**url)
+        else:   # Anonymous or Digest authentication
+            url = '{scheme}://{server}{rpc_path}'.format(**url)
+        if len(auth) == 3:  # Digest authentication
+            transport = HTTPDigestTransport(scheme, *auth)
+            self.server = xmlrpclib.ServerProxy(url, transport=transport)
+        else:
+            self.server = xmlrpclib.ServerProxy(url)
+
+        self.wiki.reset_attrs()
+        self.ticket.reset_attrs()
+        self.user = self.get_user()
 
     def wiki_view(self, page=False, direction=False):
         """ Creates The Wiki View """
@@ -1394,36 +1385,9 @@ class Trac:
         self.uitimeline.timeline_window.clean()
         self.uitimeline.timeline_window.write((output_string))
 
-    def set_current_server(self, server_key, quiet=False, view=False):
-        """ Sets the current server key """
-        self.ticket.current_ticket_id = False
-        self.wiki.current_page = False
-
-        self.server_url = self.server_list[server_key]
-        self.server_name = server_key
-        self.user = self.get_user(self.server_url)
-
-        self.wiki.set_server(self.server_url)
-        self.ticket.set_server(self.server_url)
-        self.search.set_server(self.server_url)
-
-        self.user = self.get_user(self.server_url)
-
-        trac.normal_view()
-
-        if not quiet:
-            print "SERVER SET TO : " + server_key
-
-            #Set view to default or custom
-            if not view:
-                view = vim.eval('g:tracDefaultView')
-
-            {'wiki': self.wiki_view,
-             'ticket': self.ticket_view,
-             'timeline': self.timeline_view,
-            }[view]()
-
-    def get_user(self, server_url):
+    def get_user(self, server_url=None):
+        if not server_url:
+            server_url = self.server_url
         return server_url.get('auth', '').split(':')[0]
 
     def normal_view(self):
@@ -1506,7 +1470,7 @@ class Trac:
 
     def changeset_view(self, changeset):
         changeset = '{scheme}://{server}/changeset/{changeset}'.format(
-                changeset=changeset, **self.wiki.server_url)
+                changeset=changeset, **self.server_url)
 
         self.normal_view()
         vim.command('belowright split')
