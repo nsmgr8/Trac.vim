@@ -59,11 +59,6 @@ class VimWindow(object):
             self.create()
         self.set_focus()
 
-    def on_create(self):
-        """ On Create is used  by the VimWindow subclasses to define vim
-            mappings and buffer settings
-        """
-
     def get_winnr(self):
         """ Returns the vim window number for wincmd calls """
         return int(vim.eval("bufwinnr('{0}')".format(self.name)))
@@ -72,18 +67,15 @@ class VimWindow(object):
         """ write to a vim buffer """
         if not isinstance(msg, basestring):
             msg = str(msg)
+        msg = msg.encode('utf-8', 'ignore')
         self.prepare()
         if self.firstwrite:
             self.firstwrite = False
-            msg = msg.encode('utf-8', 'ignore')
             self.buffer[:] = msg.split('\n')
         else:
             self.buffer.append(msg.split('\n'))
         self.command('normal gg')
         self.on_write()
-
-    def on_before_write(self):
-        """ for vim commands before a write is made to a buffer """
 
     def on_write(self):
         """ for vim commands after a write is made to a buffer """
@@ -101,6 +93,11 @@ class VimWindow(object):
         self.width = int(vim.eval("winwidth(0)"))
         self.height = int(vim.eval("winheight(0)"))
         self.on_create()
+
+    def on_create(self):
+        """ On Create is used  by the VimWindow subclasses to define vim
+            mappings and buffer settings
+        """
 
     def destroy(self):
         """ destroy window """
@@ -133,9 +130,6 @@ class VimWindow(object):
 
 
 class NonEditableWindow(VimWindow):
-    def on_before_write(self):
-        vim.command("setlocal modifiable")
-
     def on_write(self):
         vim.command("setlocal nomodifiable")
 
@@ -149,16 +143,18 @@ class NonEditableWindow(VimWindow):
 
 class UI(object):
     """ User Interface Base Class """
+    mode = 0
+
     def open(self):
         """ change mode to a vim window view """
-        if self.mode == 1:  # is wiki mode ?
+        if self.mode == 1:
             return
         self.mode = 1
         self.create()
 
     def normal_mode(self):
         """ restore mode to normal """
-        if self.mode == 0:  # is normal mode ?
+        if self.mode == 0:
             return
         self.destroy()
         self.mode = 0
@@ -192,8 +188,12 @@ class TracWiki(object):
                 wikitext = trac.server.wiki.getPage(name, revision)
             else:
                 wikitext = trac.server.wiki.getPage(name)
+                self.get_page_info()
         except:
-            wikitext = "Describe {0} here.".format(name)
+            if revision is None:
+                wikitext = "Describe {0} here.".format(name)
+            else:
+                wikitext = ''
         return wikitext
 
     def save(self,  comment):
@@ -267,12 +267,14 @@ class TracWiki(object):
         if revision is None:
             revision = self.revision - 1
 
+        wikitext = self.get_page(self.current_page, revision)
+        if not wikitext:
+            print 'No previous version available'
+            return
+
         diffwindow = WikiVimDiffWindow()
         diffwindow.create('vertical belowright diffsplit')
-
-        wikitext = self.get_page(self.current_page, revision)
-        if wikitext:
-            diffwindow.write(wikitext)
+        diffwindow.write(wikitext)
 
         trac.uiwiki.tocwindow.resize_width(30)
         trac.uiwiki.wikiwindow.set_focus()
@@ -286,7 +288,6 @@ class TracWikiUI(UI):
         self.wikiwindow = WikiWindow()
         self.tocwindow = WikiTOContentsWindow()
         self.wiki_attach_window = WikiAttachmentWindow()
-        self.mode = 0  # Initialised to default
 
     def destroy(self):
         """ destroy windows """
@@ -444,7 +445,6 @@ class TracSearchUI(UI):
     def __init__(self):
         """ Initialize the User Interface """
         self.searchwindow = TracSearchWindow()
-        self.mode = 0
 
     def destroy(self):
         """ destroy windows """
@@ -927,7 +927,6 @@ class TracTicket(object):
         global trac
         trac.uiticket.summarywindow.create('belowright 10 new')
         trac.uiticket.summarywindow.write(self.get_all_tickets(True, False))
-        trac.uiticket.mode = 2
 
 
 class TracTicketUI(UI):
@@ -938,18 +937,12 @@ class TracTicketUI(UI):
         self.tocwindow = TicketTOContentsWindow()
         self.commentwindow = TicketCommentWindow()
         self.summarywindow = TicketSummaryWindow()
-        self.mode = 0
 
     def normal_mode(self):
         """ restore mode to normal """
         if self.mode == 0:
             return
 
-        if self.mode == 2:
-            self.summarywindow.destroy()
-            return
-
-        # destory all created windows
         self.destroy()
         self.mode = 0
         self.cursign = None
@@ -1098,7 +1091,6 @@ class TracServerUI(UI):
     """ Server User Interface View """
     def __init__(self):
         self.serverwindow = ServerWindow()
-        self.mode = 0
 
     def server_mode(self):
         """ Displays server mode """
@@ -1169,7 +1161,6 @@ class TracTimelineUI(UI):
     """ UI Manager for Timeline View """
     def __init__(self):
         self.timeline_window = TracTimelineWindow()
-        self.mode = 0
 
     def create(self):
         style = vim.eval('g:tracTimelineStyle')
@@ -1256,6 +1247,7 @@ class Trac(object):
 
     def wiki_view(self, page=False, direction=False):
         """ Creates The Wiki View """
+        print 'Connecting...'
         if direction:
             current = self.wiki.visited_pages.index(self.wiki.current_page)
             try:
@@ -1372,6 +1364,7 @@ class Trac(object):
 
     def search_view(self, keyword):
         """  run a search """
+        print 'Connecting...'
         self.normal_view()
         output_string = self.search.search(keyword)
         self.uisearch.open()
@@ -1379,6 +1372,7 @@ class Trac(object):
         self.uisearch.searchwindow.write(output_string)
 
     def timeline_view(self):
+        print 'Connecting...'
         self.normal_view()
         output_string = self.timeline.read_timeline()
         self.uitimeline.open()
@@ -1469,6 +1463,7 @@ class Trac(object):
             vim.command('!{0} file://{1}'.format(browser, file_name))
 
     def changeset_view(self, changeset):
+        print 'Connecting...'
         changeset = '{scheme}://{server}/changeset/{changeset}'.format(
                 changeset=changeset, **self.server_url)
 

@@ -239,6 +239,7 @@ fun LoadWikiCommands()
     com! -nargs=0                                     TWPreview       python trac.preview(False)
     com! -nargs=0                                     TWDump          python trac.preview(True)
     com! -nargs=?                                     TWVimDiff       python trac.wiki.vim_diff(<f-args>)
+    com! -nargs=0                                     TWInfo          python print trac.wiki.get_page_info()
 endfun
 
 fun UnloadWikiCommands()
@@ -249,6 +250,7 @@ fun UnloadWikiCommands()
         delc TWPreview
         delc TWDump
         delc TWVimDiff
+        delc TWInfo
     endtry
 endfun
 
