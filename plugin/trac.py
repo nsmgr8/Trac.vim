@@ -5,6 +5,7 @@ import vim
 import xmlrpclib
 import re
 import codecs
+import datetime
 
 
 trac = None
@@ -531,12 +532,12 @@ class TracTicket(object):
     def number_tickets(self):
         return len(trac.server.ticket.query(self.query_string(True)))
 
-    def get_all_tickets(self, summary=True, b_use_cache=False):
+    def get_all_tickets(self, summary=True, cached=False):
         """ Gets a List of Ticket Pages """
         if not self.attribs:
             self.get_attribs()
 
-        if b_use_cache:
+        if cached and self.tickets:
             tickets = self.tickets
         else:
             multicall = xmlrpclib.MultiCall(trac.server)
@@ -549,18 +550,23 @@ class TracTicket(object):
             ticket_list = []
         else:
             ticket_list = ["Hit <enter> or <space> on a line containing :>>"]
-            #if self.filter.filters:
-                #ticket_list.append("(filtered)")
-                #ticket_list.append(self.filter.list())
+            arranged = 'Group: {group}, Order: {order}, Page: {page}'
+            ticket_list.append(arranged.format(page=self.page, **self.sorter))
+            filters = ', '.join(['{0}={1}'.format(k, v) for k, v
+                                    in self.filters.iteritems()])
+            ticket_list.append('Filters: {0}'.format(filters))
+            ticket_list.append('No. of tickets: {0}'.format(
+                                self.number_tickets()))
 
         for ticket in tickets:
             if summary:
-                str_ticket = [str(ticket[0])]
+                str_ticket = [str(ticket[0]),
+                              truncate_words(ticket[3]['summary'])]
             else:
-                str_ticket = [""]
-                str_ticket.append("Ticket:>> {0}".format(ticket[0]))
-            for f in ('summary', 'priority', 'status', 'component',
-                        'milestone', 'type', 'version', 'owner'):
+                str_ticket = ["", "Ticket:>> {0}".format(ticket[0]),
+                              ticket[3]['summary']]
+            for f in ('status', 'type', 'priority', 'component', 'milestone',
+                      'version', 'owner', 'reporter'):
                 v = truncate_words(ticket[3].get(f, ''))
                 if not summary:
                     v = "   * {0}: {1}".format(f.title(), v)
@@ -587,9 +593,9 @@ class TracTicket(object):
         self.current_component = ticket[3].get("component")
         self.list_attachments()
 
-        str_ticket = ["= Ticket Summary =", ""]
-        str_ticket.append(" *   Ticket ID: {0}".format(ticket[0]))
-        for f in ('owner', 'reporter', 'status', 'summary', 'type', 'priority',
+        str_ticket = ["= Ticket Summary =", "",
+                "Ticket #{0}: {1}".format(ticket[0], ticket[3]['summary']), ""]
+        for f in ('owner', 'reporter', 'status', 'type', 'priority',
                   'component', 'milestone', 'version'):
             v = ticket[3].get(f, '')
             str_ticket.append(" *{0:>12}: {1}".format(f.title(), v))
@@ -597,8 +603,9 @@ class TracTicket(object):
         if self.session_is_present():
             str_ticket.append(" *     Session: PRESENT")
 
-        str_ticket.append(" * Attachments: ")
-        str_ticket.append(', '.join(self.attachments))
+        if self.attachments:
+            str_ticket.extend(["", "= Attachments: =", ""])
+            str_ticket.extend([' * {0}'.format(a) for a in self.attachments])
 
         str_ticket.append("")
         str_ticket.append("= Description: =")
@@ -607,7 +614,6 @@ class TracTicket(object):
         str_ticket.append("")
         str_ticket.append("= Changelog =")
 
-        import datetime
         submission = [None, None]
         for change in ticket_changelog:
             if not change[4]:
@@ -1279,7 +1285,7 @@ class Trac(object):
                                                     self.wiki.attachments))
         self.uiwiki.wikiwindow.set_focus()
 
-    def ticket_view(self, id=False, b_use_cache=False):
+    def ticket_view(self, id=False, cached=False):
         """ Creates The Ticket View """
         print 'Connecting...'
         if id == 'CURRENTLINE':
@@ -1304,11 +1310,11 @@ class Trac(object):
         if style == 'summary':
             self.uiticket.summarywindow.clean()
             self.uiticket.summarywindow.write(self.ticket.get_all_tickets(True,
-                                                b_use_cache))
+                                                cached))
         else:
             self.uiticket.tocwindow.clean()
             self.uiticket.tocwindow.write(self.ticket.get_all_tickets(False,
-                                                b_use_cache))
+                                                cached))
 
         self.uiticket.ticketwindow.clean()
         self.uiticket.ticketwindow.write(self.ticket.get_ticket(id))
