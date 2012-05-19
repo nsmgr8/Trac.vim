@@ -205,7 +205,7 @@ endif
 " preview window
 " map <leader>tp :python trac_preview()<cr>
 "
-" map <leader>tp :python trac.ticket.summary_view()<cr>
+" map <leader>tp :python trac.summary_view()<cr>
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 "End Configuration
@@ -260,23 +260,21 @@ com! -nargs=? TTOpen python trac.ticket_view(<f-args>)
 
 fun LoadTicketCommands()
     "Trac Ticket modifications
-    com! -nargs=+                                     TTCreateTask        python trac.ticket.create(<q-args>, 'task')
-    com! -nargs=+                                     TTCreateDefect      python trac.ticket.create(<q-args>, 'defect')
-    com! -nargs=+                                     TTCreateEnhancement python trac.ticket.create(<q-args>, 'enhancement')
+    com! -nargs=+                                     TTCreateTask        python trac.create_ticket('task', <q-args>)
+    com! -nargs=+                                     TTCreateDefect      python trac.create_ticket('defect', <q-args>)
+    com! -nargs=+                                     TTCreateEnhancement python trac.create_ticket('enhancement', <q-args>)
 
-    com! -nargs=0                                     TTAddComment        python trac.ticket.add_comment()
-    "Ticket Attributes
-    com! -nargs=? -complete=customlist,ComMilestone   TTSetMilestone      python trac.ticket.set_attr(<f-args>, 'milestone')
-    com! -nargs=? -complete=customlist,ComType        TTSetType           python trac.ticket.set_attr(<f-args>, 'type')
-    com! -nargs=? -complete=customlist,ComStatus      TTSetStatus         python trac.ticket.set_attr(<f-args>, 'status')
-    com! -nargs=? -complete=customlist,ComResolution  TTSetResolution     python trac.ticket.set_attr(<f-args>, 'resolution')
-    com! -nargs=? -complete=customlist,ComPriority    TTSetPriority       python trac.ticket.set_attr(<f-args>, 'priority')
-    com! -nargs=? -complete=customlist,ComSeverity    TTSetSeverity       python trac.ticket.set_attr(<f-args>, 'severity')
-    com! -nargs=? -complete=customlist,ComComponent   TTSetComponent      python trac.ticket.set_attr(<f-args>, 'component')
-    com! -nargs=?                                     TTSetOwner          python trac.ticket.set_attr(<f-args>, 'owner')
-    com! -nargs=+                                     TTSetSummary        python trac.ticket.set_summary(<q-args>)
-
-    com! -nargs=0                                     TTUpdateDescrption  python trac.ticket.update_description()
+    com! -nargs=0                                     TTSetSummary        python trac.update_ticket('summary')
+    com! -nargs=0                                     TTUpdateDescrption  python trac.update_ticket('description')
+    com! -nargs=0                                     TTAddComment        python trac.update_ticket('comment')
+    com! -nargs=? -complete=customlist,ComMilestone   TTSetMilestone      python trac.update_ticket('milestone', <f-args>)
+    com! -nargs=? -complete=customlist,ComType        TTSetType           python trac.update_ticket('type', <f-args>)
+    com! -nargs=? -complete=customlist,ComStatus      TTSetStatus         python trac.update_ticket('status', <f-args>)
+    com! -nargs=? -complete=customlist,ComResolution  TTSetResolution     python trac.update_ticket('resolution', <f-args>)
+    com! -nargs=? -complete=customlist,ComPriority    TTSetPriority       python trac.update_ticket('priority', <f-args>)
+    com! -nargs=? -complete=customlist,ComSeverity    TTSetSeverity       python trac.update_ticket('severity', <f-args>)
+    com! -nargs=? -complete=customlist,ComComponent   TTSetComponent      python trac.update_ticket('component', <f-args>)
+    com! -nargs=?                                     TTSetOwner          python trac.update_ticket('owner', <f-args>)
 
     com! -nargs=? -complete=customlist,ComMilestone   TTFilterMilestone   python trac.filter_ticket('milestone', <f-args>)
     com! -nargs=? -complete=customlist,ComType        TTFilterType        python trac.filter_ticket('type', <f-args>)

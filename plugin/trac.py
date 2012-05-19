@@ -532,7 +532,7 @@ class TracTicket(object):
     def number_tickets(self):
         return len(trac.server.ticket.query(self.query_string(True)))
 
-    def get_all_tickets(self, summary=True, cached=False):
+    def get_all(self, summary=True, cached=False):
         """ Gets a List of Ticket Pages """
         if not self.attribs:
             self.get_attribs()
@@ -579,7 +579,7 @@ class TracTicket(object):
 
         return "\n".join(ticket_list)
 
-    def get_ticket(self, id):
+    def get(self, id):
         """ Get Ticket Page """
         try:
             id = int(id)
@@ -652,12 +652,12 @@ class TracTicket(object):
 
         return '\n'.join(str_ticket)
 
-    def update_ticket(self, comment, attribs={}, notify=False):
+    def update(self, comment, attribs={}, notify=False):
         """ add ticket comments change attributes """
         return trac.server.ticket.update(self.current_ticket_id, comment,
                                          attribs, notify)
 
-    def create_ticket(self, description, summary, attributes={}):
+    def create(self, description, summary, attributes={}):
         """ create a trac ticket """
         self.current_ticket_id = trac.server.ticket.create(summary,
                 description, attributes, False)
@@ -688,95 +688,6 @@ class TracTicket(object):
         else:
             with open(file_name, 'w') as fp:
                 fp.write(buffer.data)
-
-    def set_attr(self, option, value):
-        global trac
-        if not value:
-            print option, "was empty. No changes made."
-            return
-
-        if trac.uiticket.mode == 0 or not trac.ticket.current_ticket_id:
-            print "Cannot make changes when there is no current ticket open"
-            return
-
-        comment = trac.uiticket.commentwindow.dump()
-        trac.uiticket.commentwindow.clean()
-        attribs = {value: option}
-        trac.ticket.update_ticket(comment, attribs, False)
-        trac.ticket_view(trac.ticket.current_ticket_id, True)
-
-    def add_comment(self):
-        """ Adds Comment window comments to the current ticket """
-        global trac
-        if trac.uiticket.mode == 0 or not trac.ticket.current_ticket_id:
-            print "Cannot make changes when there is no current ticket is open"
-            return
-
-        comment = trac.uiticket.commentwindow.dump()
-        attribs = {}
-
-        if not comment:
-            print "Comment window is empty. Not adding to ticket"
-
-        trac.ticket.update_ticket(comment, attribs, False)
-        trac.uiticket.commentwindow.clean()
-        trac.ticket_view(trac.ticket.current_ticket_id)
-
-    def update_description(self):
-        """ Adds Comment window as a description to the current ticket """
-        global trac
-        confirm = vim.eval(
-                'confirm("Overwrite Description?", "&Yes\n&No\n", 2)')
-        if int(confirm) == 2:
-            print "Cancelled."
-            return
-
-        if trac.uiticket.mode == 0 or not trac.ticket.current_ticket_id:
-            print "Cannot make changes when there is no current ticket is open"
-            return
-
-        comment = trac.uiticket.commentwindow.dump()
-        attribs = {'description': comment}
-        if not comment:
-            print "Comment window is empty. Not adding to ticket"
-
-        trac.ticket.update_ticket('', attribs, False)
-        trac.uiticket.commentwindow.clean()
-        trac.ticket_view(trac.ticket.current_ticket_id)
-
-    def create(self, summary='new ticket', type=False):
-        """ writes comment window to a new  ticket  """
-        global trac
-        description = trac.uiticket.commentwindow.dump()
-
-        if trac.uiticket.mode == 0:
-            print "Can't create a ticket when not in Ticket View"
-            return
-
-        confirm = vim.eval('confirm("Create Ticket on ' + trac.server_name +
-                           '?", "&Yes\n&No\n", 2)')
-        if int(confirm) == 2:
-            print "Cancelled."
-            return
-
-        if type:
-            attribs = {'type': type}
-        else:
-            attribs = {}
-
-        if not description:
-            print "Description is empty. Ticket needs more info"
-
-        trac.ticket.create_ticket(description, summary, attribs)
-        trac.uiticket.commentwindow.clean()
-        trac.ticket_view(trac.ticket.current_ticket_id)
-
-    def close_ticket(self, comment):
-        self.update_ticket(comment, {'status': 'closed'})
-
-    def resolve_ticket(self, comment, resolution):
-        self.update_ticket(comment, {'status': 'closed',
-                                    'resolution': resolution})
 
     def session_save(self):
         global trac
@@ -897,14 +808,6 @@ class TracTicket(object):
         sessfile = self.get_session_file(id)
         return  os.path.isfile(sessfile)
 
-    def set_summary(self, summary):
-        confirm = vim.eval('confirm("Overwrite Summary?", "&Yes\n&No\n", 2)')
-        if int(confirm) == 2:
-            print "Cancelled."
-            return
-        attribs = {'summary': summary}
-        trac.ticket.update_ticket('', attribs, False)
-
     def context_set(self):
         line = vim.current.line
         if re.match("Milestone:", line):
@@ -928,11 +831,6 @@ class TracTicket(object):
         vim.command('setlocal modifiable')
         setting = vim.eval("complete(col('.'), g:tracOptions)")
         print setting
-
-    def summary_view(self):
-        global trac
-        trac.uiticket.summarywindow.create('belowright 10 new')
-        trac.uiticket.summarywindow.write(self.get_all_tickets(True, False))
 
 
 class TracTicketUI(UI):
@@ -1309,15 +1207,15 @@ class Trac(object):
         style = vim.eval('g:tracTicketStyle')
         if style == 'summary':
             self.uiticket.summarywindow.clean()
-            self.uiticket.summarywindow.write(self.ticket.get_all_tickets(True,
+            self.uiticket.summarywindow.write(self.ticket.get_all(True,
                                                 cached))
         else:
             self.uiticket.tocwindow.clean()
-            self.uiticket.tocwindow.write(self.ticket.get_all_tickets(False,
+            self.uiticket.tocwindow.write(self.ticket.get_all(False,
                                                 cached))
 
         self.uiticket.ticketwindow.clean()
-        self.uiticket.ticketwindow.write(self.ticket.get_ticket(id))
+        self.uiticket.ticketwindow.write(self.ticket.get(id))
         #self.ticket.list_attachments()
 
         if not self.ticket.attribs:
@@ -1346,6 +1244,51 @@ class Trac(object):
         except:
             self.ticket.page -= direction
             print 'cannot go beyond current page'
+
+    def create_ticket(self, summary='new ticket', type_=False):
+        """ writes comment window to a new  ticket  """
+
+        if self.uiticket.mode == 0:
+            print "Can't create a ticket when not in Ticket View"
+            return
+
+        description = self.uiticket.commentwindow.dump()
+        if not description:
+            print "Description is empty. Ticket needs more info"
+            return
+
+        confirm = vim.eval('confirm("Create Ticket on ' + self.server_name +
+                           '?", "&Yes\n&No\n", 2)')
+        if int(confirm) == 2:
+            print "Cancelled."
+            return
+
+        attribs = {'type': type_} if type_ else {}
+        self.ticket.create(description, summary, attribs)
+        self.uiticket.commentwindow.clean()
+        self.ticket_view(trac.ticket.current_ticket_id)
+
+    def update_ticket(self, option, value=None):
+        if self.uiticket.mode == 0 or not self.ticket.current_ticket_id:
+            print "Cannot make changes when there is no current ticket open"
+            return
+
+        text = self.uiticket.commentwindow.dump()
+        if option in ('summary', 'description'):
+            value = text
+            comment = ''
+        else:
+            comment = text
+        attribs = {option: value} if value else {}
+        if not any((comment, attribs)):
+            print 'nothing to change'
+            return
+        self.ticket.update(comment, attribs, False)
+        self.ticket_view(trac.ticket.current_ticket_id, True)
+
+    def summary_view(self):
+        self.uiticket.summarywindow.create('belowright 10 new')
+        self.uiticket.summarywindow.write(self.ticket.get_all(True, False))
 
     def server_view(self):
         """ Display's The Server list view """
