@@ -11,6 +11,10 @@ import datetime
 trac = None
 
 
+def confirm(text):
+    return int(vim.eval('confirm("{0}", "&Yes\n&No", 2)'.format(text))) != 2
+
+
 def truncate_words(text, num_words=10):
     words = text.split()
     if len(words) <= num_words:
@@ -519,15 +523,15 @@ class TracTicket(object):
         self.sorter[attrib] = value
 
     def query_string(self, f_all=False):
-        clause = 'order={order}&group={group}&page={page}'
-        clause = clause.format(page=self.page, **self.sorter)
-        clause = '{0}&{1}'.format(clause, vim.eval('g:tracTicketClause'))
+        query = 'order={order}&group={group}&page={page}'
+        query = query.format(page=self.page, **self.sorter)
+        query = '{0}&{1}'.format(query, vim.eval('g:tracTicketClause'))
         filters = ['{0}={1}'.format(k, v) for k, v in self.filters.iteritems()]
         if filters:
-            clause = '{0}&{1}'.format(clause, '&'.join(filters))
+            query = '{0}&{1}'.format(query, '&'.join(filters))
         if f_all:
-            clause = '{0}&max=0'.format(clause)
-        return clause
+            query = '{0}&max=0'.format(query)
+        return query
 
     def number_tickets(self):
         return len(trac.server.ticket.query(self.query_string(True)))
@@ -579,17 +583,17 @@ class TracTicket(object):
 
         return "\n".join(ticket_list)
 
-    def get(self, id):
+    def get(self, tid):
         """ Get Ticket Page """
         try:
-            id = int(id)
-            ticket = trac.server.ticket.get(id)
-            ticket_changelog = trac.server.ticket.changeLog(id)
-            actions = trac.server.ticket.getActions(id)
+            tid = int(tid)
+            ticket = trac.server.ticket.get(tid)
+            ticket_changelog = trac.server.ticket.changeLog(tid)
+            actions = trac.server.ticket.getActions(tid)
         except:
             return 'Please select a ticket'
 
-        self.current_ticket_id = id
+        self.current_ticket_id = tid
         self.current_component = ticket[3].get("component")
         self.list_attachments()
 
@@ -1183,23 +1187,23 @@ class Trac(object):
                                                     self.wiki.attachments))
         self.uiwiki.wikiwindow.set_focus()
 
-    def ticket_view(self, id=False, cached=False):
+    def ticket_view(self, tid=False, cached=False):
         """ Creates The Ticket View """
         print 'Connecting...'
-        if id == 'CURRENTLINE':
-            id = vim.current.line
-            if 'Ticket:>>' in id:
-                id = id.replace('Ticket:>> ', '')
+        if tid == 'CURRENTLINE':
+            tid = vim.current.line
+            if 'Ticket:>>' in tid:
+                tid = tid.replace('Ticket:>> ', '')
             else:
                 print "Click within a tickets area"
                 return
 
-        if id == 'SUMMARYLINE':
+        if tid == 'SUMMARYLINE':
             m = re.search(r'^([0123456789]+)', vim.current.line)
-            id = int(m.group(0))
+            tid = int(m.group(0))
 
-        if not id:
-            id = self.ticket.current_ticket_id
+        if not tid:
+            tid = self.ticket.current_ticket_id
 
         self.normal_view()
         self.uiticket.open()
@@ -1208,14 +1212,13 @@ class Trac(object):
         if style == 'summary':
             self.uiticket.summarywindow.clean()
             self.uiticket.summarywindow.write(self.ticket.get_all(True,
-                                                cached))
+                                                                  cached))
         else:
             self.uiticket.tocwindow.clean()
-            self.uiticket.tocwindow.write(self.ticket.get_all(False,
-                                                cached))
+            self.uiticket.tocwindow.write(self.ticket.get_all(False, cached))
 
         self.uiticket.ticketwindow.clean()
-        self.uiticket.ticketwindow.write(self.ticket.get(id))
+        self.uiticket.ticketwindow.write(self.ticket.get(tid))
         #self.ticket.list_attachments()
 
         if not self.ticket.attribs:
@@ -1247,7 +1250,6 @@ class Trac(object):
 
     def create_ticket(self, summary='new ticket', type_=False):
         """ writes comment window to a new  ticket  """
-
         if self.uiticket.mode == 0:
             print "Can't create a ticket when not in Ticket View"
             return
@@ -1257,10 +1259,8 @@ class Trac(object):
             print "Description is empty. Ticket needs more info"
             return
 
-        confirm = vim.eval('confirm("Create Ticket on ' + self.server_name +
-                           '?", "&Yes\n&No\n", 2)')
-        if int(confirm) == 2:
-            print "Cancelled."
+        if not confirm('Create ticket at {0}?'.format(self.server_name)):
+            print 'Ticket creation cancelled.'
             return
 
         attribs = {'type': type_} if type_ else {}
@@ -1269,7 +1269,8 @@ class Trac(object):
         self.ticket_view(trac.ticket.current_ticket_id)
 
     def update_ticket(self, option, value=None):
-        if self.uiticket.mode == 0 or not self.ticket.current_ticket_id:
+        tid = self.ticket.current_ticket_id
+        if self.uiticket.mode == 0 or not tid:
             print "Cannot make changes when there is no current ticket open"
             return
 
@@ -1283,8 +1284,13 @@ class Trac(object):
         if not any((comment, attribs)):
             print 'nothing to change'
             return
+
+        if not confirm('Update ticket #{0}?'.format(tid)):
+            print 'Update cancelled.'
+            return
+
         self.ticket.update(comment, attribs, False)
-        self.ticket_view(trac.ticket.current_ticket_id, True)
+        self.ticket_view(tid, True)
 
     def summary_view(self):
         self.uiticket.summarywindow.create('belowright 10 new')
