@@ -1123,6 +1123,13 @@ class Trac(object):
         self.normal_view()
         self.uiticket.open()
 
+        self.uiticket.ticketwindow.clean()
+        self.uiticket.ticketwindow.write(self.ticket.get(tid))
+        if self.ticket.attachments:
+            self.uiticket.attachwindow.create('belowright 3 new')
+            self.uiticket.attachwindow.write("\n".join(
+                                             self.ticket.attachments))
+
         style = vim.eval('g:tracTicketStyle')
         if style == 'summary':
             self.uiticket.summarywindow.clean()
@@ -1132,16 +1139,8 @@ class Trac(object):
             self.uiticket.tocwindow.clean()
             self.uiticket.tocwindow.write(self.ticket.get_all(False, cached))
 
-        self.uiticket.ticketwindow.clean()
-        self.uiticket.ticketwindow.write(self.ticket.get(tid))
-        if self.ticket.attachments:
-            self.uiticket.attachwindow.create('belowright 3 new')
-            self.uiticket.attachwindow.write("\n".join(
-                                             self.ticket.attachments))
+        if self.ticket.current_ticket_id:
             self.uiticket.ticketwindow.set_focus()
-
-        if not self.ticket.current_ticket_id:
-            self.uiticket.summarywindow.set_focus()
 
     def sort_ticket(self, sorter, attr):
         self.ticket.set_sort_attr(sorter, attr)
