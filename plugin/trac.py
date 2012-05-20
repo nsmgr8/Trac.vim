@@ -493,7 +493,8 @@ class TracTicket(object):
         self.reset_attrs()
 
     def reset_attrs(self):
-        self.current_ticket_id = False
+        self.current_ticket_id = None
+        self.visited_tickets = []
         self.actions = []
         self.attribs = []
         self.tickets = []
@@ -583,6 +584,8 @@ class TracTicket(object):
             tid = int(tid)
             ticket = trac.server.ticket.get(tid)
             self.current_ticket_id = tid
+            if tid not in self.visited_tickets:
+                self.visited_tickets.append(tid)
             ticket_changelog = trac.server.ticket.changeLog(tid)
             self.current_component = ticket[3].get("component")
             actions = self.get_actions()
@@ -856,14 +859,15 @@ class TicketWindow(NonEditableWindow):
         NonEditableWindow.__init__(self, name)
 
     def on_create(self):
+        vim.command('nnoremap <buffer> wb '
+                    ':python trac.ticket_view(direction=-1)<cr>')
+        vim.command('nnoremap <buffer> wf '
+                    ':python trac.ticket_view(direction=1)<cr>')
+        vim.command('nnoremap <buffer> ws '
+                    ':python print trac.ticket.visited_tickets<cr>')
         vim.command('setlocal noswapfile')
         vim.command('setlocal textwidth=100')
-        #map gf to a new buffer(switching buffers doesnt work with nofile)
-        vim.command('nnoremap <buffer> gf <c-w><c-f><c-w>K')
-        #vim.command('setlocal linebreak')
         vim.command('setlocal syntax=tracwiki')
-        #vim.command('nnoremap <buffer> <c-p> '
-                    #':python trac.ticket.context_set()<cr>')
 
 
 class TicketCommentWindow(VimWindow):
@@ -1058,7 +1062,7 @@ class Trac(object):
         self.ticket.reset_attrs()
         self.user = self.get_user()
 
-    def wiki_view(self, page=False, direction=False):
+    def wiki_view(self, page=False, direction=None):
         """ Creates The Wiki View """
         print 'Connecting...'
         if direction:
@@ -1091,7 +1095,7 @@ class Trac(object):
             self.uiwiki.attachwindow.write("\n".join(self.wiki.attachments))
         self.uiwiki.wikiwindow.set_focus()
 
-    def ticket_view(self, tid=False, cached=False):
+    def ticket_view(self, tid=False, cached=False, direction=None):
         """ Creates The Ticket View """
         print 'Connecting...'
         if tid == 'CURRENTLINE':
@@ -1108,6 +1112,13 @@ class Trac(object):
 
         if not tid:
             tid = self.ticket.current_ticket_id
+        if direction:
+            index = self.ticket.visited_tickets.index(tid)
+            try:
+                tid = self.ticket.visited_tickets[index + direction]
+            except IndexError:
+                print 'Error: History out of range'
+                return
 
         self.normal_view()
         self.uiticket.open()
@@ -1127,9 +1138,10 @@ class Trac(object):
             self.uiticket.attachwindow.create('belowright 3 new')
             self.uiticket.attachwindow.write("\n".join(
                                              self.ticket.attachments))
+            self.uiticket.ticketwindow.set_focus()
 
-        if not self.ticket.attribs:
-            self.ticket.get_attribs()
+        if not self.ticket.current_ticket_id:
+            self.uiticket.summarywindow.set_focus()
 
     def sort_ticket(self, sorter, attr):
         self.ticket.set_sort_attr(sorter, attr)
