@@ -529,8 +529,10 @@ class TracTicket(object):
             tickets = multicall()
             self.tickets = tickets
 
+        columns = ['#', 'summary', 'status', 'type', 'priority', 'component',
+                   'milestone', 'version', 'owner', 'reporter']
         if summary:
-            ticket_list = []
+            ticket_list = [' || '.join([c.title() for c in columns])]
         else:
             ticket_list = ["Hit <enter> or <space> on a line containing :>>"]
             arranged = 'Group: {group}, Order: {order}, Page: {page}'
@@ -548,8 +550,7 @@ class TracTicket(object):
             else:
                 str_ticket = ["", "Ticket:>> {0}".format(ticket[0]),
                               ticket[3]['summary']]
-            for f in ('status', 'type', 'priority', 'component', 'milestone',
-                      'version', 'owner', 'reporter'):
+            for f in columns[2:]:
                 v = truncate_words(ticket[3].get(f, ''))
                 if not summary:
                     v = "   * {0}: {1}".format(f.title(), v)
@@ -783,16 +784,18 @@ class TracTicketUI(UI):
         vim.command("call LoadTicketCommands()")
 
 
-class TicketSummaryWindow(VimWindow):
+class TicketSummaryWindow(NonEditableWindow):
     """ Ticket Table Of Contents """
     def __init__(self, name='TICKETSUMMARY_WINDOW'):
-        VimWindow.__init__(self, name)
+        NonEditableWindow.__init__(self, name)
 
     def on_create(self):
         vim.command('nnoremap <buffer> <cr> '
                     ':python trac.ticket_view("SUMMARYLINE")<cr>')
         vim.command('nnoremap <buffer> <2-LeftMouse> '
                     ':python trac.ticket_view("SUMMARYLINE")<cr>')
+        vim.command('nnoremap <buffer> wt '
+                    ':above split<cr>:resize 1<cr>:wincmd j<cr>')
         vim.command('setlocal cursorline')
         vim.command('setlocal linebreak')
         vim.command('setlocal syntax=text')
@@ -800,14 +803,30 @@ class TicketSummaryWindow(VimWindow):
         vim.command('setlocal nowrap')
         vim.command('silent norm gg')
         vim.command('setlocal noswapfile')
+        vim.command('setlocal colorcolumn=0')
 
     def on_write(self):
         try:
+            vim.command('AlignCtrl rl+')
             vim.command('%Align ||')
         except:
             vim.command('echo install Align for the best view of summary')
         vim.command('syn match Ignore /||/')
-        vim.command('norm gg')
+        vim.command('syn match Keyword /enhancement/')
+        vim.command('syn match Identifier /task/')
+        vim.command('syn match Todo /defect/')
+        vim.command('syn match Type /blocker/')
+        vim.command('syn match Special /critical/')
+        vim.command('syn match PreProc /major/')
+        vim.command('syn match PreProc /major/')
+        vim.command('syn match Constant /minor/')
+        vim.command('syn match Underlined /^\s*#.*$/')
+        vim.command('syn match Constant /new/')
+        vim.command('syn match Keyword /accepted/')
+        vim.command('syn match Identifier /assigned/')
+        vim.command('syn match Type /reopened/')
+        vim.command('syn match Todo /ready/')
+        vim.command('setlocal nomodifiable')
 
 
 class TicketWindow(NonEditableWindow):
@@ -1056,8 +1075,12 @@ class Trac(object):
                 return
 
         if tid == 'SUMMARYLINE':
-            m = re.search(r'^([0123456789]+)', vim.current.line)
-            tid = int(m.group(0))
+            m = re.search(r'^\s*([0123456789]+)', vim.current.line)
+            try:
+                tid = int(m.group(0))
+            except:
+                print 'no ticket selected'
+                return
 
         if not tid:
             tid = self.ticket.current_ticket_id
