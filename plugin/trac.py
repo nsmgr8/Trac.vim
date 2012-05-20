@@ -293,13 +293,13 @@ class TracWikiUI(UI):
         """ Initialize the User Interface """
         self.wikiwindow = WikiWindow()
         self.tocwindow = WikiTOContentsWindow()
-        self.wiki_attach_window = WikiAttachmentWindow()
+        self.attachwindow = AttachmentWindow()
 
     def destroy(self):
         """ destroy windows """
         self.wikiwindow.destroy()
         self.tocwindow.destroy()
-        self.wiki_attach_window.destroy()
+        self.attachwindow.destroy()
 
         vim.command("call UnloadWikiCommands()")
 
@@ -336,7 +336,6 @@ class WikiWindow(VimWindow):
             ('wb', ':python trac.wiki_view(direction=-1)<cr>'),
             ('wf', ':python trac.wiki_view(direction=1)<cr>'),
             ('<2-LeftMouse>', ':python trac.wiki_view("<C-R><C-W>")<cr>'),
-            ('gf', '<c-w><c-f><c-w>K'),
             (':w<cr>', ':TWSave<cr>'),
         ]
         for m in nmaps:
@@ -388,16 +387,14 @@ class WikiTOContentsWindow(NonEditableWindow):
         NonEditableWindow.on_write(self)
 
 
-class WikiAttachmentWindow(NonEditableWindow):
+class AttachmentWindow(NonEditableWindow):
     """ Wiki's attachments """
-    def __init__(self, name='WIKIATT_WINDOW'):
+    def __init__(self, name='ATTACHMENT_WINDOW'):
         NonEditableWindow.__init__(self, name)
 
     def on_create(self):
         vim.command('nnoremap <buffer> <cr> '
                     ':python trac.get_attachment("CURRENTLINE")<cr>')
-        #vim.command('setlocal winwidth=30')
-        #vim.command('vertical resize 30')
         vim.command('setlocal cursorline')
         vim.command('setlocal linebreak')
         vim.command('setlocal noswapfile')
@@ -503,6 +500,7 @@ class TracTicket(object):
         self.sorter = {'order': 'priority', 'group': 'milestone'}
         self.filters = {}
         self.page = 1
+        self.attachments = []
 
     def get_attribs(self):
         """ Get all milestone/ priority /status options """
@@ -599,10 +597,6 @@ class TracTicket(object):
             v = ticket[3].get(f, '')
             str_ticket.append(" *{0:>12}: {1}".format(f.title(), v))
 
-        if self.attachments:
-            str_ticket.extend(["", "= Attachments: =", ""])
-            str_ticket.extend([' * {0}'.format(a) for a in self.attachments])
-
         str_ticket.append("")
         str_ticket.append("= Description: =")
         str_ticket.append("")
@@ -669,11 +663,11 @@ class TracTicket(object):
             with open(file_name, 'w') as fp:
                 fp.write(buffer.data)
 
-    def add_attachment(self, file):
+    def add_attachment(self, file, comment=''):
         """ Add attachment """
         file_name = os.path.basename(file)
         trac.server.ticket.putAttachment(self.current_ticket_id, file_name,
-                'attachment', xmlrpclib.Binary(open(file).read()))
+                comment, xmlrpclib.Binary(open(file).read()))
 
     def list_attachments(self):
         a_attach = trac.server.ticket.listAttachments(self.current_ticket_id)
@@ -768,6 +762,7 @@ class TracTicketUI(UI):
         self.tocwindow = TicketTOContentsWindow()
         self.commentwindow = TicketCommentWindow()
         self.summarywindow = TicketSummaryWindow()
+        self.attachwindow = AttachmentWindow()
 
     def normal_mode(self):
         """ restore mode to normal """
@@ -786,6 +781,7 @@ class TracTicketUI(UI):
         self.tocwindow.destroy()
         self.commentwindow.destroy()
         self.summarywindow.destroy()
+        self.attachwindow.destroy()
 
     def create(self):
         """ create windows """
@@ -1091,9 +1087,8 @@ class Trac(object):
         self.wiki.list_attachments()
 
         if self.wiki.attachments:
-            self.uiwiki.wiki_attach_window.create('belowright 3 new')
-            self.uiwiki.wiki_attach_window.write("\n".join(
-                                                    self.wiki.attachments))
+            self.uiwiki.attachwindow.create('belowright 3 new')
+            self.uiwiki.attachwindow.write("\n".join(self.wiki.attachments))
         self.uiwiki.wikiwindow.set_focus()
 
     def ticket_view(self, tid=False, cached=False):
@@ -1128,7 +1123,10 @@ class Trac(object):
 
         self.uiticket.ticketwindow.clean()
         self.uiticket.ticketwindow.write(self.ticket.get(tid))
-        #self.ticket.list_attachments()
+        if self.ticket.attachments:
+            self.uiticket.attachwindow.create('belowright 3 new')
+            self.uiticket.attachwindow.write("\n".join(
+                                             self.ticket.attachments))
 
         if not self.ticket.attribs:
             self.ticket.get_attribs()
@@ -1262,24 +1260,28 @@ class Trac(object):
         return server_url.get('auth', '').split(':')[0]
 
     def normal_view(self):
-        trac.uiserver.normal_mode()
-        trac.uiwiki.normal_mode()
-        trac.uiticket.normal_mode()
-        trac.uisearch.normal_mode()
-        trac.uitimeline.normal_mode()
+        self.uiserver.normal_mode()
+        self.uiwiki.normal_mode()
+        self.uiticket.normal_mode()
+        self.uisearch.normal_mode()
+        self.uitimeline.normal_mode()
 
     def add_attachment(self, file):
         """ add an attachment to current wiki / ticket """
         if self.uiwiki.mode == 1:
             print "Adding attachment to wiki", self.wiki.current_page
             self.wiki.add_attachment(file)
+            self.wiki_view()
             print 'Done.'
         elif self.uiticket.mode == 1:
             print "Adding attachment to ticket", self.ticket.current_ticket_id
-            self.ticket.add_attachment(file)
+            comment = self.uiticket.commentwindow.dump()
+            self.ticket.add_attachment(file, comment)
+            self.ticket_view()
             print 'Done.'
         else:
             print "You need an active ticket or wiki open!"
+            return
 
     def get_attachment(self, file):
         """ retrieves attachment """
