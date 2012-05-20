@@ -6,6 +6,8 @@ import xmlrpclib
 import re
 import codecs
 import datetime
+from time import strftime
+import urllib2
 
 
 trac = None
@@ -35,7 +37,6 @@ class HTTPDigestTransport(xmlrpclib.SafeTransport):
         xmlrpclib.SafeTransport.__init__(self)
 
     def request(self, host, handler, request_body, verbose):
-        import urllib2
         url = '{scheme}://{host}{handler}'.format(scheme=self.scheme,
                                                   host=host, handler=handler)
         request = urllib2.Request(url)
@@ -56,7 +57,6 @@ class VimWindow(object):
     def __init__(self, name='WINDOW'):
         self.name = name
         self.buffer = []
-        self.firstwrite = True
 
     def prepare(self):
         """ check window is OK, if not then create """
@@ -68,14 +68,13 @@ class VimWindow(object):
         """ Returns the vim window number for wincmd calls """
         return int(vim.eval("bufwinnr('{0}')".format(self.name)))
 
-    def write(self, msg):
+    def write(self, msg, append=False):
         """ write to a vim buffer """
         if not isinstance(msg, basestring):
             msg = str(msg)
         msg = msg.encode('utf-8', 'ignore')
         self.prepare()
-        if self.firstwrite:
-            self.firstwrite = False
+        if not append:
             self.buffer[:] = msg.split('\n')
         else:
             self.buffer.append(msg.split('\n'))
@@ -110,13 +109,6 @@ class VimWindow(object):
         if not self.buffer:
             return
         self.command('bdelete {0}'.format(self.name))
-        self.firstwrite = True
-
-    def clean(self):
-        """ clean all datas in buffer """
-        self.prepare()
-        self.buffer[:] = []
-        self.firstwrite = True
 
     def command(self, cmd):
         """ go to my window & execute command """
@@ -139,13 +131,6 @@ class NonEditableWindow(VimWindow):
     def on_write(self):
         vim.command("setlocal nomodifiable")
 
-    def clean(self):
-        """ clean all datas in buffer """
-        self.prepare()
-        vim.command('setlocal modifiable')
-        self.buffer[:] = []
-        self.firstwrite = True
-
 
 class UI(object):
     """ User Interface Base Class """
@@ -164,7 +149,6 @@ class UI(object):
             return
         self.destroy()
         self.mode = 0
-        self.cursign = None
 
 
 class TracWiki(object):
@@ -204,7 +188,6 @@ class TracWiki(object):
 
     def save(self,  comment):
         """ Saves a Wiki Page """
-        global trac
         if not comment:
             comment = trac.default_comment
         trac.server.wiki.putPage(self.current_page,
@@ -268,7 +251,6 @@ class TracWiki(object):
 
     def vim_diff(self, revision=None):
         """ Creates a vimdiff of an earlier wiki revision """
-        global trac
         #default to previous revision
         if revision is None:
             revision = self.revision - 1
@@ -733,29 +715,6 @@ class TracTicket(object):
         }.get(type_, [])
         vim.command('let g:tracOptions="{0}"'.format("|".join(options)))
 
-    def context_set(self):
-        line = vim.current.line
-        if re.match("Milestone:", line):
-            self.get_options(0)
-        elif re.match("Type:", line):
-            self.get_options(1)
-        elif re.match("Status:", line):
-            self.get_options(2)
-        elif re.match("Resolution:", line):
-            self.get_options(3)
-        elif re.match("Priority:", line):
-            self.get_options(4)
-        elif re.match("Severity:", line):
-            self.get_options(5)
-        elif re.match("Component:", line):
-            self.get_options(6)
-        else:
-            print "This only works on ticket property lines"
-            return
-        vim.command('setlocal modifiable')
-        setting = vim.eval("complete(col('.'), g:tracOptions)")
-        print setting
-
 
 class TracTicketUI(UI):
     """ Trac Wiki User Interface Manager """
@@ -774,7 +733,6 @@ class TracTicketUI(UI):
 
         self.destroy()
         self.mode = 0
-        self.cursign = None
 
     def destroy(self):
         """ destroy windows """
@@ -849,7 +807,6 @@ class TicketSummaryWindow(VimWindow):
         except:
             vim.command('echo install Align for the best view of summary')
         vim.command('syn match Ignore /||/')
-        #vim.command("setlocal nomodifiable")
         vim.command('norm gg')
 
 
@@ -917,7 +874,6 @@ class TracServerUI(UI):
         """ Displays server mode """
         self.create()
         vim.command('2wincmd w')  # goto srcview window(nr=1, top-left)
-        self.cursign = '1'
 
     def create(self):
         """ create windows """
@@ -935,21 +891,16 @@ class ServerWindow(NonEditableWindow):
 
 
 class TracTimeline:
-    def read_timeline(self):
+    def read_timeline(self, server):
         """ Call the XML Rpc list """
-        global trac
         try:
             import feedparser
         except ImportError:
             print "Please install feedparser.py!"
             return
 
-        from time import strftime
-        import re
-
         query = 'ticket=on&changeset=on&wiki=on&max=50&daysback=90&format=rss'
-        feed = '{scheme}://{server}/timeline?{query}'.format(query=query,
-                                                        **trac.server_url)
+        feed = '{scheme}://{server}/timeline?{q}'.format(q=query, **server)
         d = feedparser.parse(feed)
         str_feed = ["Hit <enter> or <space> on a line containing :>>", ""]
         for item in d['items']:
@@ -1083,9 +1034,7 @@ class Trac(object):
         self.normal_view()
 
         self.uiwiki.open()
-        self.uiwiki.tocwindow.clean()
         self.uiwiki.tocwindow.write(self.wiki.get_all_pages())
-        self.uiwiki.wikiwindow.clean()
         self.uiwiki.wikiwindow.write(self.wiki.get_page(page))
 
         self.wiki.list_attachments()
@@ -1123,7 +1072,6 @@ class Trac(object):
         self.normal_view()
         self.uiticket.open()
 
-        self.uiticket.ticketwindow.clean()
         self.uiticket.ticketwindow.write(self.ticket.get(tid))
         if self.ticket.attachments:
             self.uiticket.attachwindow.create('belowright 3 new')
@@ -1132,11 +1080,9 @@ class Trac(object):
 
         style = vim.eval('g:tracTicketStyle')
         if style == 'summary':
-            self.uiticket.summarywindow.clean()
             self.uiticket.summarywindow.write(self.ticket.get_all(True,
                                                                   cached))
         else:
-            self.uiticket.tocwindow.clean()
             self.uiticket.tocwindow.write(self.ticket.get_all(False, cached))
 
         if self.ticket.current_ticket_id:
@@ -1184,7 +1130,6 @@ class Trac(object):
 
         attribs = {'type': type_} if type_ else {}
         self.ticket.create(description, summary, attribs)
-        self.uiticket.commentwindow.clean()
         self.ticket_view(trac.ticket.current_ticket_id)
 
     def update_ticket(self, option, value=None):
@@ -1230,7 +1175,6 @@ class Trac(object):
     def server_view(self):
         """ Display's The Server list view """
         self.uiserver.server_mode()
-        self.uiserver.serverwindow.clean()
         servers = "\n".join(['{0}: {1}'.format(key, val['server']) for key, val
                              in self.server_list.iteritems()])
         self.uiserver.serverwindow.write(servers)
@@ -1254,15 +1198,13 @@ class Trac(object):
         self.normal_view()
         output_string = self.search.search(keyword)
         self.uisearch.open()
-        self.uisearch.searchwindow.clean()
         self.uisearch.searchwindow.write(output_string)
 
     def timeline_view(self):
         print 'Connecting...'
         self.normal_view()
-        output_string = self.timeline.read_timeline()
+        output_string = self.timeline.read_timeline(self.server_url)
         self.uitimeline.open()
-        self.uitimeline.timeline_window.clean()
         self.uitimeline.timeline_window.write((output_string))
 
     def get_user(self, server_url=None):
