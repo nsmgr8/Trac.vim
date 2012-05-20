@@ -151,10 +151,6 @@ if !exists('g:tracTempHtml')
     let g:tracTempHtml = '/tmp/trac_wiki.html'
 endif
 
-if !exists('g:tracSessionDirectory')
-    let g:tracSessionDirectory = expand('$HOME') . '/.vimtrac_session'
-endif
-
 if !exists('g:tracBrowser')
     let g:tracBrowser = 'lynx'         " For Setting up Browser view (terminal)
     "let g:tracBrowser = 'firefox'     " For Setting up Browser view (linux gui  - not tested)
@@ -320,12 +316,6 @@ fun LoadTicketCommands()
     "Html Preview
     com! -nargs=0                                     TTPreview           python trac.preview()
 
-    com! -nargs=0                                     TTLoadTicketSession python trac.ticket.session_load()
-    com! -nargs=0                                     TTSaveTicketSession python trac.ticket.session_save()
-
-    com! -nargs=? -complete=customlist,ComComponent   TTSaveCompSession   python trac.ticket.session_component_save(<q-args>)
-    com! -nargs=* -complete=customlist,ComComponent   TTLoadCompSession   python trac.ticket.session_component_load(<q-args>)
-
     com! -nargs=+ -complete=customlist,ComAction      TTAction            python trac.act_ticket(<q-args>)
 endfun
 
@@ -380,9 +370,6 @@ fun UnloadTicketCommands()
         delc TTAddAttachment
         "Html Preview
         delc TTPreview
-
-        delc TTLoadTicketSession
-        delc TTSaveTicketSession
 
         delc TTAction
     endtry

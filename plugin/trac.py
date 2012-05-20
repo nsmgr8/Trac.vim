@@ -577,8 +577,6 @@ class TracTicket(object):
                     v = "   * {0}: {1}".format(f.title(), v)
                 str_ticket.append(v)
 
-            if not summary and self.session_is_present(ticket[0]):
-                str_ticket.append("   * Session: PRESENT")
             separator = ' || ' if summary else '\n'
             ticket_list.append(separator.join(str_ticket))
 
@@ -603,9 +601,6 @@ class TracTicket(object):
                   'component', 'milestone', 'version'):
             v = ticket[3].get(f, '')
             str_ticket.append(" *{0:>12}: {1}".format(f.title(), v))
-
-        if self.session_is_present():
-            str_ticket.append(" *     Session: PRESENT")
 
         if self.attachments:
             str_ticket.extend(["", "= Attachments: =", ""])
@@ -743,125 +738,6 @@ class TracTicket(object):
             'action': self.actions,
         }.get(type_, [])
         vim.command('let g:tracOptions="{0}"'.format("|".join(options)))
-
-    def session_save(self):
-        global trac
-        if not self.current_ticket_id:
-            print "You need to have an active ticket"
-            return
-
-        directory = vim.eval('g:tracSessionDirectory')
-        if os.path.isfile(directory):
-            print "Cant create session directory"
-            return
-
-        if not os.path.isdir(directory):
-            os.mkdir(directory)
-
-        serverdir = re.sub(r'[^\w]', '', trac.server_name)
-
-        if not os.path.isdir(directory + '/' + serverdir):
-            os.mkdir(directory + '/' + serverdir)
-
-        sessfile = directory + '/' + serverdir + "/vimsess." \
-                + str(self.current_ticket_id)
-        vim.command('mksession! ' + sessfile)
-        print "Session file Created: " + sessfile
-
-    def session_load(self):
-        global trac
-        if not self.current_ticket_id:
-            print "You need to have an active ticket"
-            return
-
-        serverdir = re.sub(r'[^\w]', '', trac.server_name)
-        directory = vim.eval('g:tracSessionDirectory')
-        sessfile = directory + '/' + serverdir + "/vimsess." \
-                + str(self.current_ticket_id)
-
-        if not os.path.isfile(sessfile):
-            print "This ticket does not have a session: " + sessfile
-            return
-
-        vim.command("bdelete TICKETTOC_WINDOW")
-        vim.command("bdelete TICKET_WINDOW")
-        vim.command("bdelete TICKET_COMMENT_WINDOW")
-        vim.command('source ' + sessfile)
-        vim.command("bdelete TICKETTOC_WINDOW")
-        vim.command("bdelete TICKET_WINDOW")
-        vim.command("bdelete TICKET_COMMENT_WINDOW")
-        trac.ticket_view(self.current_ticket_id)
-
-    def session_component_save(self, component=False):
-        """ Save a session based on the component supplied or the current
-        ticket """
-        global trac
-        if not component:
-            if not self.current_component:
-                print "You need an active ticket or a component as an argument"
-                return
-            else:
-                component = self.current_component
-
-        directory = vim.eval('g:tracSessionDirectory')
-        if os.path.isfile(directory):
-            print "Cant create session directory"
-            return
-
-        if not os.path.isdir(directory):
-            os.mkdir(directory)
-
-        serverdir = re.sub(r'[^\w]', '', trac.server_name)
-        component = re.sub(r'[^\w]', '', component)
-
-        if not os.path.isdir(directory + '/' + serverdir):
-            os.mkdir(directory + '/' + serverdir)
-
-        sessfile = directory + '/' + serverdir + "/vimsess." + str(component)
-        vim.command('mksession! ' + sessfile)
-        print "Session file Created: " + sessfile
-
-    def session_component_load(self, component):
-        """ Loads a session based on the component supplied or the current
-        ticket """
-        global trac
-        if not component:
-            if not self.current_componentd:
-                print "You need an active ticket or a component as an argument"
-                return
-            else:
-                component = self.current_component
-
-        serverdir = re.sub(r'[^\w]', '', trac.server_name)
-        component = re.sub(r'[^\w]', '', component)
-        directory = vim.eval('g:tracSessionDirectory')
-        sessfile = directory + '/' + serverdir + "/vimsess." + str(component)
-
-        if not os.path.isfile(sessfile):
-            print "This ticket does not have a session: " + sessfile
-            return
-
-        vim.command("bdelete TICKETTOC_WINDOW")
-        vim.command("bdelete TICKET_WINDOW")
-        vim.command("bdelete TICKET_COMMENT_WINDOW")
-        vim.command('source ' + sessfile)
-        vim.command("bdelete TICKETTOC_WINDOW")
-        vim.command("bdelete TICKET_WINDOW")
-        vim.command("bdelete TICKET_COMMENT_WINDOW")
-        trac.ticket_view(self.current_ticket_id)
-
-    def get_session_file(self, id=None):
-        global trac
-        if not id:
-            id = self.current_ticket_id
-
-        directory = vim.eval('g:tracSessionDirectory')
-        serverdir = re.sub(r'[^\w]', '', trac.server_name)
-        return directory + '/' + serverdir + "/vimsess." + str(id)
-
-    def session_is_present(self, id=None):
-        sessfile = self.get_session_file(id)
-        return  os.path.isfile(sessfile)
 
     def context_set(self):
         line = vim.current.line
