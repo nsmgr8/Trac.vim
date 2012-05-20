@@ -227,7 +227,7 @@ class TracWiki(object):
         file_name = os.path.basename(file)
         path = '{0}/{1}'.format(self.current_page, file_name)
         trac.server.wiki.putAttachment(path,
-                xmlrpclib.Binary(open(file).read()))
+                                       xmlrpclib.Binary(open(file).read()))
 
     def get_attachment(self, file):
         """ Get attachment """
@@ -500,6 +500,7 @@ class TracTicket(object):
 
     def reset_attrs(self):
         self.current_ticket_id = False
+        self.actions = []
         self.attribs = []
         self.tickets = []
         self.sorter = {'order': 'priority', 'group': 'milestone'}
@@ -588,14 +589,13 @@ class TracTicket(object):
         try:
             tid = int(tid)
             ticket = trac.server.ticket.get(tid)
+            self.current_ticket_id = tid
             ticket_changelog = trac.server.ticket.changeLog(tid)
-            actions = trac.server.ticket.getActions(tid)
+            self.current_component = ticket[3].get("component")
+            actions = self.get_actions()
+            self.list_attachments()
         except:
             return 'Please select a ticket'
-
-        self.current_ticket_id = tid
-        self.current_component = ticket[3].get("component")
-        self.list_attachments()
 
         str_ticket = ["= Ticket Summary =", "",
                 "Ticket #{0}: {1}".format(ticket[0], ticket[3]['summary']), ""]
@@ -652,7 +652,7 @@ class TracTicket(object):
         str_ticket.append('== Action ==')
         str_ticket.append("")
         for action in actions:
-            str_ticket.append(' > {action[0]}'.format(action=action))
+            str_ticket.append(' - {action[0]}'.format(action=action))
 
         return '\n'.join(str_ticket)
 
@@ -666,6 +666,17 @@ class TracTicket(object):
         self.current_ticket_id = trac.server.ticket.create(summary,
                 description, attributes, False)
 
+    def get_attachment(self, file):
+        """ Get attachment """
+        buffer = trac.server.ticket.getAttachment(self.current_ticket_id, file)
+        file_name = os.path.basename(file)
+
+        if os.path.exists(file_name):
+            print "Will not overwrite existing file", file_name
+        else:
+            with open(file_name, 'w') as fp:
+                fp.write(buffer.data)
+
     def add_attachment(self, file):
         """ Add attachment """
         file_name = os.path.basename(file)
@@ -678,20 +689,60 @@ class TracTicket(object):
         for attach in a_attach:
             self.attachments.append(attach[0])
 
-    def get_options(self, op_id):
-        vim.command('let g:tracOptions="{0}"'.format("|".join(
-                                                     self.attribs[op_id])))
+    def get_actions(self):
+        """ Get available actions for a ticket """
+        actions = trac.server.ticket.getActions(self.current_ticket_id)
+        self.actions = []
+        for action in actions:
+            if action[3]:
+                for options in action[3]:
+                    if options[2]:
+                        for a in options[2]:
+                            self.actions.append('{0} {1}'.format(action[0], a))
+                    else:
+                        self.actions.append('{0} {1}'.format(action[0],
+                                                             options[1]))
+            else:
+                self.actions.append(action[0])
+        return actions
 
-    def get_attachment(self, file):
-        """ Get attachment """
-        buffer = trac.server.ticket.getAttachment(self.current_ticket_id, file)
-        file_name = os.path.basename(file)
-
-        if os.path.exists(file_name):
-            print "Will not overwrite existing file", file_name
+    def act(self, action):
+        """ Perform an action on current ticket """
+        action = action.split()
+        try:
+            name, options = action[0], action[1:]
+        except IndexError:
+            print 'No action requested'
+            return
+        actions = self.get_actions()
+        action = None
+        for a in actions:
+            if a[0] == name:
+                action = a
+                break
         else:
-            with open(file_name, 'w') as fp:
-                fp.write(buffer.data)
+            print 'action is not valid'
+            return
+        attribs = {'action': name}
+        for i, opt in enumerate(options):
+            ac = action[3][i]
+            if opt in ac[2]:
+                attribs[ac[0]] = opt
+            elif opt == ac[1]:
+                attribs[ac[0]] = opt
+            else:
+                print 'invalid option'
+                return
+        self.update('', attribs)
+
+    def get_options(self, op_id=0, type_='attrib'):
+        options = {
+            'attrib': self.attribs[op_id],
+            'field': ['component', 'milestone', 'owner', 'priority',
+                      'reporter', 'status', 'type', 'version'],
+            'action': self.actions,
+        }.get(type_, [])
+        vim.command('let g:tracOptions="{0}"'.format("|".join(options)))
 
     def session_save(self):
         global trac
@@ -831,7 +882,6 @@ class TracTicket(object):
         else:
             print "This only works on ticket property lines"
             return
-        self.get_options(0)
         vim.command('setlocal modifiable')
         setting = vim.eval("complete(col('.'), g:tracOptions)")
         print setting
@@ -1246,6 +1296,7 @@ class Trac(object):
             self.ticket_view()
         except:
             self.ticket.page -= direction
+            self.ticket_view()
             print 'cannot go beyond current page'
 
     def create_ticket(self, summary='new ticket', type_=False):
@@ -1290,6 +1341,18 @@ class Trac(object):
             return
 
         self.ticket.update(comment, attribs, False)
+        self.ticket_view(tid, True)
+
+    def act_ticket(self, action):
+        tid = self.ticket.current_ticket_id
+        if self.uiticket.mode == 0 or not tid:
+            print "Cannot make changes when there is no current ticket open"
+            return
+        if not confirm('Perform action on ticket #{0}?'.format(tid)):
+            print 'Action cancelled.'
+            return
+
+        self.ticket.act(action)
         self.ticket_view(tid, True)
 
     def summary_view(self):

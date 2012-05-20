@@ -326,13 +326,7 @@ fun LoadTicketCommands()
     com! -nargs=? -complete=customlist,ComComponent   TTSaveCompSession   python trac.ticket.session_component_save(<q-args>)
     com! -nargs=* -complete=customlist,ComComponent   TTLoadCompSession   python trac.ticket.session_component_load(<q-args>)
 
-    "Ticket resolution
-    com! -nargs=*                                     TTCloseTicket       python trac.ticket.close_ticket(<q-args>)
-    com! -nargs=*                                     TTResolveFixed      python trac.ticket.resolve_ticket(<q-args>, 'fixed')
-    com! -nargs=*                                     TTResolveWontfix    python trac.ticket.resolve_ticket(<q-args>, 'wontfix')
-    com! -nargs=*                                     TTResolveDuplicate  python trac.ticket.resolve_ticket(<q-args>, 'duplicate')
-    com! -nargs=*                                     TTResolveInvalid    python trac.ticket.resolve_ticket(<q-args>, 'invalid')
-    com! -nargs=*                                     TTResolveWorksForMe python trac.ticket.resolve_ticket(<q-args>, 'worksforme')
+    com! -nargs=+ -complete=customlist,ComAction      TTAction            python trac.act_ticket(<q-args>)
 endfun
 
 fun UnloadTicketCommands()
@@ -386,18 +380,11 @@ fun UnloadTicketCommands()
         delc TTAddAttachment
         "Html Preview
         delc TTPreview
+
         delc TTLoadTicketSession
         delc TTSaveTicketSession
-        delc TTCloseTicket
-        delc TTListFilters
-        delc TTFilterNoMilestone
-        delc TTFilterNoOwner
-        "resolution
-        delc TTResolveFixed
-        delc TTResolveWontfix
-        delc TTResolveDuplicate
-        delc TTResolveInvalid
-        delc TTResolveWorksForMe
+
+        delc TTAction
     endtry
 endfun
 
@@ -466,7 +453,13 @@ fun ComVersion(A, L, P)
 endfun
 
 fun ComSort(A, L, P)
-    return filter(['component', 'milestone', 'owner', 'priority', 'reporter', 'status', 'type', 'version'], 'v:val =~ "^' . a:A . '"')
+    python trac.ticket.get_options(type_='field')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
+endfun
+
+fun ComAction(A, L, P)
+    python trac.ticket.get_options(type_='action')
+    return filter(split(g:tracOptions, '|'), 'v:val =~ "^' . a:A . '"')
 endfun
 
 
