@@ -812,21 +812,17 @@ class TicketSummaryWindow(NonEditableWindow):
         except:
             vim.command('echo install Align for the best view of summary')
         vim.command('syn match Ignore /||/')
-        vim.command('syn match Keyword /enhancement/')
-        vim.command('syn match Identifier /task/')
-        vim.command('syn match Todo /defect/')
-        vim.command('syn match Type /blocker/')
-        vim.command('syn match Special /critical/')
-        vim.command('syn match PreProc /major/')
-        vim.command('syn match PreProc /major/')
-        vim.command('syn match Constant /minor/')
-        vim.command('syn match Underlined /^\s*#.*$/')
-        vim.command('syn match Constant /new/')
-        vim.command('syn match Keyword /accepted/')
-        vim.command('syn match Identifier /assigned/')
-        vim.command('syn match Type /reopened/')
-        vim.command('syn match Todo /ready/')
-        vim.command('setlocal nomodifiable')
+        hilighters = ['Constant', 'Special', 'Identifier', 'Statement',
+                      'PreProc', 'Type', 'Underlined', 'Error', 'Todo']
+        num_hi = len(hilighters)
+        for attrs in trac.ticket.attribs:
+            for i, a in enumerate(attrs):
+                try:
+                    float(a)
+                except ValueError:
+                    hi = hilighters[i % num_hi]
+                    vim.command('syn match {0} /{1}/'.format(hi,
+                                a.replace('/', '\/')))
 
 
 class TicketWindow(NonEditableWindow):
