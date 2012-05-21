@@ -678,7 +678,7 @@ class TracTicket(object):
                 self.actions.append(action[0])
         return actions
 
-    def act(self, action):
+    def act(self, action, comment=''):
         """ Perform an action on current ticket """
         action = action.split()
         try:
@@ -705,7 +705,7 @@ class TracTicket(object):
             else:
                 print 'invalid option'
                 return
-        self.update('', attribs)
+        self.update(comment, attribs)
 
     def get_options(self, op_id=0, type_='attrib'):
         options = {
@@ -1188,7 +1188,7 @@ class Trac(object):
             print 'Action cancelled.'
             return
 
-        self.ticket.act(action)
+        self.ticket.act(action, self.uiticket.commentwindow.dump())
         self.ticket_view(tid, True)
 
     def summary_view(self):
