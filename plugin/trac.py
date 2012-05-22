@@ -1132,7 +1132,7 @@ class Trac(object):
             self.ticket_view()
             print 'cannot go beyond current page'
 
-    def create_ticket(self, summary='new ticket', type_=False):
+    def create_ticket(self, type_=False, summary='new ticket'):
         """ writes comment window to a new  ticket  """
         if self.uiticket.mode == 0:
             print "Can't create a ticket when not in Ticket View"
